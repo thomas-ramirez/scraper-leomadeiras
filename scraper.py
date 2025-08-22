@@ -323,59 +323,46 @@ def extrair_produto(url):
     if breadcrumb_list:
         breadcrumb_items = breadcrumb_list.find_all("li", {"itemprop": "itemListElement"})
         
-        print(f"🔍 Debug: Encontrado breadcrumb schema.org com {len(breadcrumb_items)} itens")
+
         
         # Extrair nomes dos breadcrumbs
         breadcrumb_names = []
         for i, item in enumerate(breadcrumb_items):
-            # Buscar o nome dentro do item
-            name_span = item.find("span", {"itemprop": "name"})
-            if name_span:
-                name = limpar(name_span.get_text())
+            # Primeiro, verificar se tem <strong> (nome do produto)
+            strong_tag = item.find("strong")
+            if strong_tag:
+                name = limpar(strong_tag.get_text())
                 breadcrumb_names.append(name)
-                print(f"   Item {i+1}: {name} (via span)")
             else:
-                # Fallback: buscar em link ou texto direto
-                link = item.find("a")
-                if link:
-                    name = limpar(link.get_text())
+                # Buscar o nome dentro do item
+                name_span = item.find("span", {"itemprop": "name"})
+                if name_span:
+                    name = limpar(name_span.get_text())
                     breadcrumb_names.append(name)
-                    print(f"   Item {i+1}: {name} (via link)")
                 else:
-                    # Texto direto no li
-                    text = limpar(item.get_text())
-                    if text and text.lower() not in ("você está em:", "you are in:"):
-                        breadcrumb_names.append(text)
-                        print(f"   Item {i+1}: {text} (via texto)")
+                    # Fallback: buscar em link ou texto direto
+                    link = item.find("a")
+                    if link:
+                        name = limpar(link.get_text())
+                        breadcrumb_names.append(name)
+                    else:
+                        # Texto direto no li
+                        text = limpar(item.get_text())
+                        if text and text.lower() not in ("você está em:", "you are in:"):
+                            breadcrumb_names.append(text)
         
         # Filtrar breadcrumbs válidos (remover "Página Inicial", "Início", etc.)
         breadcrumb_names = [name for name in breadcrumb_names if name and name.lower() not in ("início", "inicio", "home", "página inicial")]
-        
-        print(f"🔍 Debug: Breadcrumbs filtrados: {breadcrumb_names}")
         
         # Atribuir departamento e categoria
         if len(breadcrumb_names) >= 2:
             NomeDepartamento = breadcrumb_names[-2]  # Penúltimo item
             NomeCategoria = breadcrumb_names[-1]     # Último item
-            print(f"🔍 Debug: Departamento='{NomeDepartamento}', Categoria='{NomeCategoria}'")
         elif len(breadcrumb_names) == 1:
             NomeCategoria = breadcrumb_names[0]
-            print(f"🔍 Debug: Apenas categoria encontrada: '{NomeCategoria}'")
-        else:
-            print(f"🔍 Debug: Nenhum breadcrumb válido encontrado")
             
-        # Fallback: buscar nome do produto no breadcrumb se não encontrou categoria
-        if not NomeCategoria:
-            # Buscar o último item do breadcrumb que não seja "Página Inicial"
-            for item in reversed(breadcrumb_items):
-                # Verificar se tem strong (nome do produto)
-                strong_tag = item.find("strong")
-                if strong_tag:
-                    NomeCategoria = limpar(strong_tag.get_text())
-                    print(f"🔍 Debug: Categoria encontrada via strong: '{NomeCategoria}'")
-                    break
-    else:
-        print("🔍 Debug: Breadcrumb schema.org não encontrado, usando fallback")
+
+
     
     # Fallback: breadcrumb genérico se schema.org não encontrado
     if not NomeDepartamento and not NomeCategoria:
