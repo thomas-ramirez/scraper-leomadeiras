@@ -1,0 +1,885 @@
+{
+	"info": {
+		"_postman_id": "2ec564f6-f8bf-4904-94b6-792facb19689",
+		"name": "Runner - nova POC",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "16579908"
+	},
+	"item": [
+		{
+			"name": "Create Department",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Name\": \"{{_NomeDepartamento}}\",\n    \"Title\": \"{{_TitleDepartamento}}\",\n    \"Description\": \"{{_DescricaoDepartamento}}\",\n    \"Keywords\": \"Riachuelo, moda, casa\",\n    \"IsActive\": true,\n    \"LomadeeCampaignCode\": null,\n    \"AdWordsRemarketingCode\": null,\n    \"ShowInStoreFront\": true,\n    \"ShowBrandFilter\": true,\n    \"ActiveStoreFrontLink\": true,\n    \"GlobalCategoryId\": 604,\n    \"StockKeepingUnitSelectionMode\": \"SPECIFICATION\",\n    \"Score\": null\n}"
+				},
+				"url": {
+					"raw": "https://riachuelodemo.vtexcommercestable.com.br/api/catalog/pvt/category",
+					"protocol": "https",
+					"host": [
+						"riachuelodemo",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"category"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Category",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Name\": \"{{_NomeCategoria}}\",\n    \"Id\":\"{{_IDCategoria}}\",\n    \"Title\": \"{{_TitleCat}}\",\n    \"FatherCategoryId\": {{_IDDepartamento}},\n    \"Description\": \"{{_DescricaoCat}}\",\n    \"Keywords\": \"Kitchen, Laundry, Appliances\",\n    \"IsActive\": true,\n    \"LomadeeCampaignCode\": null,\n    \"AdWordsRemarketingCode\": null,\n    \"ShowInStoreFront\": true,\n    \"ShowBrandFilter\": true,\n    \"ActiveStoreFrontLink\": true,\n    \"GlobalCategoryId\": 604,\n    \"StockKeepingUnitSelectionMode\": \"SPECIFICATION\",\n    \"Score\": null\n}"
+				},
+				"url": {
+					"raw": "https://b2bgrupodass.vtexcommercestable.com.br/api/catalog/pvt/category",
+					"protocol": "https",
+					"host": [
+						"b2bgrupodass",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"category"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Product with category and brand certa",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "JCHWZSYSLRZIPTWEORIAZVBEFOQLNISDVZFJUYPKKDVQCFVRAPSVDGHAKDGLPQXLSFSQJOHPTVHGKNWHKIBZONOQNQODJUGTFVKHRSZQAXAIISPKESXJUXAWTWEEFIQX",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "vtexappkey-alimerka-PYXCUP",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "{{X-VTEX-API-AppToken}}",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "{{X-VTEX-API-AppKey}}",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"Id\": {{_IDProduto}},\r\n\"Name\": \"{{_NomeProduto}}\",\r\n\"DepartmentId\": {{_IDDepartamento}},\r\n\"CategoryId\": {{_IDCategoria}},\r\n\"BrandId\": {{_IDMarca}},\r\n\"LinkId\": \"{{_LinkTexto}}\",\r\n\"RefId\": \"{{_CodigoReferenciaProduto}}\",\r\n\"IsVisible\": true,\r\n\"Description\": \"{{_DescricaoProduto}}\",\r\n\"DescriptionShort\": \"{{_BreveDescricaoProduto}}\",\r\n\"ReleaseDate\": \"2024-01-01T00:00:00\",\r\n\"KeyWords\": null,\r\n\"Title\": \"{{_TituloSite}}\",\r\n\"IsActive\": false,\r\n\"TaxCode\": \"\",\r\n\"MetaTagDescription\": \"{{_DescricaoMetaTag}}\",\r\n\"SupplierId\": 1,\r\n\"ShowWithoutStock\": true,\r\n\"AdWordsRemarketingCode\": \"\",\r\n\"LomadeeCampaignCode\": \"\",\r\n\"Score\": 1\r\n}"
+				},
+				"url": {
+					"raw": "https://b2bgrupodass.vtexcommercestable.com.br/api/catalog/pvt/product",
+					"protocol": "https",
+					"host": [
+						"b2bgrupodass",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"product"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Product",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "JCHWZSYSLRZIPTWEORIAZVBEFOQLNISDVZFJUYPKKDVQCFVRAPSVDGHAKDGLPQXLSFSQJOHPTVHGKNWHKIBZONOQNQODJUGTFVKHRSZQAXAIISPKESXJUXAWTWEEFIQX",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "vtexappkey-alimerka-PYXCUP",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "{{X-VTEX-API-AppToken}}",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "{{X-VTEX-API-AppKey}}",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"Id\": {{_IDProduto}},\r\n\"Name\": \"{{_NomeProduto}}\",\r\n\"DepartmentId\": {{_IDDepartamento}},\r\n\"CategoryId\": {{_IDCategoria}},\r\n\"BrandId\": {{_IDMarca}},\r\n\"LinkId\": \"{{_LinkTexto}}\",\r\n\"RefId\": \"{{_CodigoReferenciaProduto}}\",\r\n\"IsVisible\": true,\r\n\"Description\": \"{{_DescricaoProduto}}\",\r\n\"DescriptionShort\": \"{{_BreveDescricaoProduto}}\",\r\n\"ReleaseDate\": \"2024-01-01T00:00:00\",\r\n\"KeyWords\": null,\r\n\"Title\": \"{{_TituloSite}}\",\r\n\"IsActive\": false,\r\n\"TaxCode\": \"\",\r\n\"MetaTagDescription\": \"{{_DescricaoMetaTag}}\",\r\n\"SupplierId\": 1,\r\n\"ShowWithoutStock\": true,\r\n\"AdWordsRemarketingCode\": \"\",\r\n\"LomadeeCampaignCode\": \"\",\r\n\"Score\": 1\r\n}"
+				},
+				"url": {
+					"raw": "https://b2bgrupodass.vtexcommercestable.com.br/api/catalog/pvt/product",
+					"protocol": "https",
+					"host": [
+						"b2bgrupodass",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"product"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create SKU ",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "vtexappkey-alimerka-PYXCUP",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "JCHWZSYSLRZIPTWEORIAZVBEFOQLNISDVZFJUYPKKDVQCFVRAPSVDGHAKDGLPQXLSFSQJOHPTVHGKNWHKIBZONOQNQODJUGTFVKHRSZQAXAIISPKESXJUXAWTWEEFIQX",
+						"disabled": true
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\"Id\": {{_IDSKU}},\n\"ProductId\": {{_IDProduto}},\n\"IsActive\": false,\n\"ActivateIfPossible\": true,\n\"Name\": \"{{_NomeSKU}}\",\n\"RefId\": \"{{_CodigoReferenciaSKU}}\",\n\"Ean\": \"{{_EANSKU}}\",\n\"PackagedHeight\": 1,\n\"PackagedLength\": 1,\n\"PackagedWidth\": 1,\n\"PackagedWeightKg\": 1,\n\"Height\": 1,\n\"Length\": 1,\n\"Width\": 1,\n\"WeightKg\": 1,\n\"CubicWeight\": 0.1,\n\"IsKit\": false,\n\"CreationDate\": \"2024-01-25T15:51:29.2614605\",\n\"RewardValue\": 0,\n\"EstimatedDateArrival\": null,\n\"ManufacturerCode\": \"\",\n\"CommercialConditionId\": 1,\n\"MeasurementUnit\": \"un\",\n\"UnitMultiplier\": 1,\n\"ModalType\": null,\n\"KitItensSellApart\": false,\n\"Videos\": null\n}"
+				},
+				"url": {
+					"raw": "https://b2bgrupodass.vtexcommercestable.com.br/api/catalog/pvt/stockkeepingunit",
+					"protocol": "https",
+					"host": [
+						"b2bgrupodass",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"stockkeepingunit"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update SKU",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "vtexappkey-alimerka-PYXCUP",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "JCHWZSYSLRZIPTWEORIAZVBEFOQLNISDVZFJUYPKKDVQCFVRAPSVDGHAKDGLPQXLSFSQJOHPTVHGKNWHKIBZONOQNQODJUGTFVKHRSZQAXAIISPKESXJUXAWTWEEFIQX",
+						"disabled": true
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\"ProductId\": {{_IDProduto}},\n\"IsActive\": false,\n\"ActivateIfPossible\": true,\n\"Name\": \"{{_NomeSKU}}\",\n\"RefId\": \"{{_EANSKU}}\",\n\"Ean\": \"{{_EANSKU}}\",\n\"PackagedHeight\": 1,\n\"PackagedLength\": 1,\n\"PackagedWidth\": 1,\n\"PackagedWeightKg\": 1,\n\"Height\": 1,\n\"Length\": 1,\n\"Width\": 1,\n\"WeightKg\": 1,\n\"CubicWeight\": 0.1,\n\"IsKit\": false,\n\"CreationDate\": \"2024-01-25T15:51:29.2614605\",\n\"RewardValue\": 0,\n\"EstimatedDateArrival\": null,\n\"ManufacturerCode\": \"\",\n\"CommercialConditionId\": 1,\n\"MeasurementUnit\": \"un\",\n\"UnitMultiplier\": 1,\n\"ModalType\": null,\n\"KitItensSellApart\": false,\n\"Videos\": null\n}"
+				},
+				"url": {
+					"raw": "https://demomeuflua.vtexcommercestable.com.br/api/catalog/pvt/stockkeepingunit/{{_IDSKU}}",
+					"protocol": "https",
+					"host": [
+						"demomeuflua",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"stockkeepingunit",
+						"{{_IDSKU}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "POST sku file ",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "accept",
+						"value": "application/json"
+					},
+					{
+						"key": "content-type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-vtex-api-appToken",
+						"value": "{{X-VTEX-API-AppToken}}",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "x-vtex-api-appKey",
+						"value": "{{X-VTEX-API-AppKey}}",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"IsMain\": true,\r\n    \"Label\": \"fila\",\r\n    \"Name\": \"fila\",\r\n    \"Url\": \"https://{{link}}\"\r\n}"
+				},
+				"url": {
+					"raw": "https://b2bgrupodass.vtexcommercestable.com.br/api/catalog/pvt/stockkeepingunit/{{_IDSKU}}/file",
+					"protocol": "https",
+					"host": [
+						"b2bgrupodass",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"stockkeepingunit",
+						"{{_IDSKU}}",
+						"file"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "put price",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "",
+						"disabled": true
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"markup\": 0,\n  \"listPrice\": null,\n  \"basePrice\": 199,\n  \"costPrice\": null,\n  \"fixedPrices\": [\n  ]\n}"
+				},
+				"url": {
+					"raw": "https://api.vtex.com/b2bgrupodass/pricing/prices/{{_IDSKU}}",
+					"protocol": "https",
+					"host": [
+						"api",
+						"vtex",
+						"com"
+					],
+					"path": [
+						"b2bgrupodass",
+						"pricing",
+						"prices",
+						"{{_IDSKU}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "put inventory",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"unlimitedQuantity\": false,\n    \"dateUtcOnBalanceSystem\": \"2025-01-07T00:52:16\",\n    \"quantity\": 100,\n    \"leadTime\": \"00.00:00:00\"\n}"
+				},
+				"url": {
+					"raw": "https://b2bgrupodasswl02.vtexcommercestable.com.br/api/logistics/pvt/inventory/skus/{{_IDSKU}}/warehouses/1_1",
+					"protocol": "https",
+					"host": [
+						"b2bgrupodasswl02",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"logistics",
+						"pvt",
+						"inventory",
+						"skus",
+						"{{_IDSKU}}",
+						"warehouses",
+						"1_1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "freight values",
+			"request": {
+				"method": "post",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json; charset=utf-8"
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "",
+						"disabled": true
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n    {\n        \"absoluteMoneyCost\": \"4.50\",\n        \"country\": \"BRA\",\n        \"maxVolume\": 1000000000,\n        \"operationType\": 1,\n        \"pricePercent\": 0,\n        \"pricePercentByWeight\": 0,\n        \"timeCost\": \"2.00:00:00\",\n        \"weightEnd\": 99999999,\n        \"weightStart\": 0,\n        \"zipCodeEnd\": \"87999999\",\n        \"zipCodeStart\": \"80000000\",\n        \"polygon\": \"\"\n    }\n]"
+				},
+				"url": {
+					"raw": "https://pamplonasewl02.vtexcommercestable.com.br/api/logistics/pvt/configuration/freights/2/values/update",
+					"protocol": "https",
+					"host": [
+						"pamplonasewl02",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"logistics",
+						"pvt",
+						"configuration",
+						"freights",
+						"2",
+						"values",
+						"update"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "sku file uploade ",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "{X-VTEX-API-AppKey}",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "{X-VTEX-API-AppToken}",
+						"disabled": true
+					},
+					{
+						"key": "Cookie",
+						"value": "{Cookie}",
+						"disabled": true
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "postman-cloud:///1ef01087-2272-4970-8a64-6e7ed1d23160"
+						},
+						{
+							"key": "IsMain",
+							"value": "false",
+							"type": "text"
+						},
+						{
+							"key": "Label",
+							"value": "Label-do-SKU",
+							"type": "text"
+						},
+						{
+							"key": "Name",
+							"value": "Nome-do-SKU",
+							"type": "text"
+						},
+						{
+							"key": "Text",
+							"value": "Text-do-SKU",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "https://riachuelodemo.vtexcommercestable.com.br/api/catalog/pvt/stockkeepingunit/1/file",
+					"protocol": "https",
+					"host": [
+						"riachuelodemo",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"stockkeepingunit",
+						"1",
+						"file"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Post SKU Specification",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"FieldId\": {{FieldId_mes}},\n    \"FieldValueId\": {{FieldValueId_mes}}\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://demomeuflua.vtexcommercestable.com.br/api/catalog/pvt/stockkeepingunit/{{_IDSKU}}/specification",
+					"protocol": "https",
+					"host": [
+						"demomeuflua",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"stockkeepingunit",
+						"{{_IDSKU}}",
+						"specification"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Example",
+					"originalRequest": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-VTEX-API-AppKey",
+								"value": "{{X-VTEX-API-AppKey}}",
+								"name": "x-vtex-api-appKey",
+								"type": "text"
+							},
+							{
+								"key": "X-VTEX-API-AppToken",
+								"value": "{{X-VTEX-API-AppToken}}",
+								"name": "x-vtex-api-appToken",
+								"type": "text"
+							},
+							{
+								"key": "x-vtex-api-appKey",
+								"value": "{{X-VTEX-API-AppKey}}"
+							},
+							{
+								"key": "x-vtex-api-appToken",
+								"value": "{{X-VTEX-API-AppToken}}"
+							}
+						],
+						"url": {
+							"raw": "https://{{accountName}}.{{environment}}.com.br/api/catalog_system/pvt/products/{{productId}}/specification",
+							"protocol": "https",
+							"host": [
+								"{{accountName}}",
+								"{{environment}}",
+								"com",
+								"br"
+							],
+							"path": [
+								"api",
+								"catalog_system",
+								"pvt",
+								"products",
+								"{{productId}}",
+								"specification"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Cache-Control",
+							"value": "no-cache",
+							"name": "Cache-Control",
+							"description": ""
+						},
+						{
+							"key": "Content-Length",
+							"value": "102",
+							"name": "Content-Length",
+							"description": ""
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8",
+							"name": "Content-Type",
+							"description": ""
+						},
+						{
+							"key": "Date",
+							"value": "Mon, 22 Jan 2018 23:18:18 GMT",
+							"name": "Date",
+							"description": ""
+						},
+						{
+							"key": "Expires",
+							"value": "-1",
+							"name": "Expires",
+							"description": ""
+						},
+						{
+							"key": "Pragma",
+							"value": "no-cache",
+							"name": "Pragma",
+							"description": ""
+						},
+						{
+							"key": "Server",
+							"value": "Microsoft-IIS/10.0",
+							"name": "Server",
+							"description": ""
+						},
+						{
+							"key": "X-AspNet-Version",
+							"value": "4.0.30319",
+							"name": "X-AspNet-Version",
+							"description": ""
+						},
+						{
+							"key": "X-Powered-By",
+							"value": "ASP.NET",
+							"name": "X-Powered-By",
+							"description": ""
+						},
+						{
+							"key": "no",
+							"value": "CELOCOUTO",
+							"name": "no",
+							"description": ""
+						},
+						{
+							"key": "p3p",
+							"value": "policyref=\"/w3c/p3p.xml\",CP=\"ADMa OUR NOR CNT NID DSP NOI COR\"",
+							"name": "p3p",
+							"description": ""
+						},
+						{
+							"key": "powered",
+							"value": "vtex",
+							"name": "powered",
+							"description": ""
+						},
+						{
+							"key": "x-vtex-operation-id",
+							"value": "7ec24c86-1dc8-4ec7-a4b7-79b06b53a742",
+							"name": "x-vtex-operation-id",
+							"description": ""
+						}
+					],
+					"cookie": [],
+					"body": "[{\"Value\":[\"Iron\",\"Plastic\"],\"Id\":30,\"Name\":\"Material\"},{\"Value\":[\"Bola4\"],\"Id\":31,\"Name\":\"Nickname\"}]"
+				}
+			]
+		},
+		{
+			"name": "prod sales channel",
+			"request": {
+				"method": "post",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "",
+						"disabled": true
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "https://riachuelodemo.vtexcommercestable.com.br/api/catalog/pvt/product/{{_IDProduto}}/salespolicy/{{trade}}",
+					"protocol": "https",
+					"host": [
+						"riachuelodemo",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"product",
+						"{{_IDProduto}}",
+						"salespolicy",
+						"{{trade}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Sku Attachment",
+			"request": {
+				"method": "post",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "VtexIdclientAutCookie",
+						"value": "{{VtexIdclientAutCookie}}",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "X-VTEX-API-AppToken",
+						"value": "{{X-VTEX-API-AppToken}}",
+						"type": "text"
+					},
+					{
+						"key": "X-VTEX-API-AppKey",
+						"value": "{{X-VTEX-API-AppKey}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"AttachmentId\": 3,\n    \"SkuId\": 42424247\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{accountName}}.vtexcommercestable.com.br/api/catalog/pvt/skuattachment",
+					"protocol": "https",
+					"host": [
+						"{{accountName}}",
+						"vtexcommercestable",
+						"com",
+						"br"
+					],
+					"path": [
+						"api",
+						"catalog",
+						"pvt",
+						"skuattachment"
+					]
+				},
+				"description": "Generated from cURL: curl --request post \\\n\t--url https://demomeuflua.vtexcommercestable.com.br/api/catalog/pvt/skuattachment \\\n\t--header 'Accept: application/json' \\\n\t--header 'Content-Type: application/json' \\\n\t--header 'X-VTEX-API-AppKey: ' \\\n\t--header 'X-VTEX-API-AppToken: ' \\\n\t--data '{\"AttachmentId\":1,\"SkuId\":1}'"
+			},
+			"response": []
+		}
+	]
+}
