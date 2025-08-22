@@ -173,6 +173,7 @@ def test_nova_loja():
 ### Campos Importantes
 - `_DescricaoProduto`: Descrição completa
 - `_NomeCategoria`: Categoria do produto
+- `_BaseUrlImagens`: URL base para imagens do produto
 - `_ImagensURLs`: URLs das imagens
 - `_CodigoReferenciaProduto`: Referência do produto
 

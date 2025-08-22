@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 # Caminho para a pasta onde estão as imagens
-folder_path = Path.home() / 'Downloads' / 'imagens_produtos'
+folder_path = Path.cwd() / 'data' / 'exports' / 'imagens_produtos'
 
 # Pasta atual do script
 current_dir = Path(__file__).parent

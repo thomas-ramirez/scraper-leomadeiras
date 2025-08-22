@@ -38,7 +38,7 @@ Thumbs.db
 
 # Project specific
 produtos_vtex.csv
-imagens_produtos/
+data/exports/imagens_produtos/
 *.html
 *.js
 page.html

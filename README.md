@@ -66,7 +66,7 @@ python scraper.py
 
 O scraper gera:
 - `data/exports/produtos_vtex.csv`: Planilha pronta para importação VTEX
-- `~/Downloads/imagens_produtos/`: Imagens baixadas dos produtos
+- `data/exports/imagens_produtos/`: Imagens baixadas dos produtos
 
 ## 🔧 Configuração
 
@@ -158,6 +158,7 @@ A planilha gerada contém:
 | `_Preço` | Preço do produto | `429.00` |
 | `_DescricaoProduto` | Descrição completa | `Composição 96% POLIAMIDA...` |
 | `_NomeCategoria` | Categoria | `Blusas` |
+| `_BaseUrlImagens` | URL base para imagens | `images-leadPOC-{sku}-{nome}` |
 | `_ImagensURLs` | URLs das imagens | `url1;url2;url3` |
 
 ## 🔄 Fluxo de Trabalho
@@ -185,7 +186,7 @@ O scraper fornece logs detalhados:
 ```
 🔍 Debug: encontrado padrão PP P M G
 ✅ Planilha final salva: data/exports/produtos_vtex.csv
-🖼️ Imagens em: ~/Downloads/imagens_produtos
+🖼️ Imagens em: data/exports/imagens_produtos
 ```
 
 ## 🤝 Contribuindo

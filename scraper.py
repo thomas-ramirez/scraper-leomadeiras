@@ -19,7 +19,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))  # Pasta atual do scrip
 
 input_csv = os.path.join(downloads_path, "produtos_link.csv")
 output_csv = os.path.join(current_dir, "data", "exports", "produtos_vtex.csv")
-output_folder = os.path.join(downloads_path, "imagens_produtos")
+output_folder = os.path.join(current_dir, "data", "exports", "imagens_produtos")
 
 df_links = pd.read_csv(input_csv)
 if "url" not in df_links.columns:
@@ -167,6 +167,16 @@ def renderizar_html(url, wait_selectors=None, timeout_ms=15000):
         finally:
             browser.close()
 
+def gerar_base_url_produto(sku, nome):
+    """Gera baseUrl único para cada produto baseado no SKU e nome"""
+    # Limpar nome para URL segura
+    nome_limpo = re.sub(r'[^a-zA-Z0-9\s-]', '', nome).strip()
+    nome_limpo = re.sub(r'\s+', '-', nome_limpo).lower()
+    
+    # Gerar baseUrl no formato: images-{leadPOC}-{sku}-{nome}
+    base_url = f"images-leadPOC-{sku}-{nome_limpo}"
+    return base_url
+
 def baixar_imagem(url_img, fname):
     try:
         with session.get(url_img, stream=True, timeout=20) as resp:
@@ -215,7 +225,9 @@ def extrair_produto(url):
     # Imagens do JSON-LD (string ou lista)
     if isinstance(jsonld, dict) and jsonld.get("image"):
         if isinstance(jsonld["image"], list):
-            imgs += [str(u) for u in jsonld["image"] if isinstance(u, str)]
+            for img in jsonld["image"]:
+                if isinstance(img, str):
+                    imgs.append(img)
         elif isinstance(jsonld["image"], str):
             imgs.append(jsonld["image"])
 
@@ -239,7 +251,8 @@ def extrair_produto(url):
                     found.extend(find_images(v))
             return found
 
-        imgs += find_images(nd)
+        next_images = find_images(nd)
+        imgs += next_images
 
         # Nome (fallback a partir do Next)
         if not nome:
@@ -301,18 +314,82 @@ def extrair_produto(url):
             # escolher o mais longo
             descricao = max(possiveis, key=len)
 
-    # --- Breadcrumb -> Departamento/Categoria ---
-    trail = [limpar(a.get_text()) for a in soup.select(
-        "nav.breadcrumb a, .breadcrumb a, .breadcrumbs a, a.breadcrumbs-href, .breadcrumb-item a, .breadcrumb-nav a, [class*='breadcrumb'] a"
-    )]
-    trail = [t for t in trail if t and t.lower() not in ("início", "inicio", "home")]
+        # --- Breadcrumb Schema.org -> Departamento/Categoria ---
+    NomeDepartamento = ""
+    NomeCategoria = ""
+    
+    # Buscar breadcrumb estruturado (schema.org)
+    breadcrumb_list = soup.find("ul", {"itemtype": "http://schema.org/BreadcrumbList"})
+    if breadcrumb_list:
+        breadcrumb_items = breadcrumb_list.find_all("li", {"itemprop": "itemListElement"})
+        
+        print(f"🔍 Debug: Encontrado breadcrumb schema.org com {len(breadcrumb_items)} itens")
+        
+        # Extrair nomes dos breadcrumbs
+        breadcrumb_names = []
+        for i, item in enumerate(breadcrumb_items):
+            # Buscar o nome dentro do item
+            name_span = item.find("span", {"itemprop": "name"})
+            if name_span:
+                name = limpar(name_span.get_text())
+                breadcrumb_names.append(name)
+                print(f"   Item {i+1}: {name} (via span)")
+            else:
+                # Fallback: buscar em link ou texto direto
+                link = item.find("a")
+                if link:
+                    name = limpar(link.get_text())
+                    breadcrumb_names.append(name)
+                    print(f"   Item {i+1}: {name} (via link)")
+                else:
+                    # Texto direto no li
+                    text = limpar(item.get_text())
+                    if text and text.lower() not in ("você está em:", "you are in:"):
+                        breadcrumb_names.append(text)
+                        print(f"   Item {i+1}: {text} (via texto)")
+        
+        # Filtrar breadcrumbs válidos (remover "Página Inicial", "Início", etc.)
+        breadcrumb_names = [name for name in breadcrumb_names if name and name.lower() not in ("início", "inicio", "home", "página inicial")]
+        
+        print(f"🔍 Debug: Breadcrumbs filtrados: {breadcrumb_names}")
+        
+        # Atribuir departamento e categoria
+        if len(breadcrumb_names) >= 2:
+            NomeDepartamento = breadcrumb_names[-2]  # Penúltimo item
+            NomeCategoria = breadcrumb_names[-1]     # Último item
+            print(f"🔍 Debug: Departamento='{NomeDepartamento}', Categoria='{NomeCategoria}'")
+        elif len(breadcrumb_names) == 1:
+            NomeCategoria = breadcrumb_names[0]
+            print(f"🔍 Debug: Apenas categoria encontrada: '{NomeCategoria}'")
+        else:
+            print(f"🔍 Debug: Nenhum breadcrumb válido encontrado")
+            
+        # Fallback: buscar nome do produto no breadcrumb se não encontrou categoria
+        if not NomeCategoria:
+            # Buscar o último item do breadcrumb que não seja "Página Inicial"
+            for item in reversed(breadcrumb_items):
+                # Verificar se tem strong (nome do produto)
+                strong_tag = item.find("strong")
+                if strong_tag:
+                    NomeCategoria = limpar(strong_tag.get_text())
+                    print(f"🔍 Debug: Categoria encontrada via strong: '{NomeCategoria}'")
+                    break
+    else:
+        print("🔍 Debug: Breadcrumb schema.org não encontrado, usando fallback")
+    
+    # Fallback: breadcrumb genérico se schema.org não encontrado
+    if not NomeDepartamento and not NomeCategoria:
+        trail = [limpar(a.get_text()) for a in soup.select(
+            "nav.breadcrumb a, .breadcrumb a, .breadcrumbs a, a.breadcrumbs-href, .breadcrumb-item a, .breadcrumb-nav a, [class*='breadcrumb'] a"
+        )]
+        trail = [t for t in trail if t and t.lower() not in ("início", "inicio", "home")]
 
-    nome_h1 = limpar(soup.select_one("div.product-name h1, h1").get_text()) if soup.select_one("div.product-name h1, h1") else ""
-    if trail and nome_h1 and trail[-1][:20].lower() in nome_h1[:20].lower():
-        trail = trail[:-1]
+        nome_h1 = limpar(soup.select_one("div.product-name h1, h1").get_text()) if soup.select_one("div.product-name h1, h1") else ""
+        if trail and nome_h1 and trail[-1][:20].lower() in nome_h1[:20].lower():
+            trail = trail[:-1]
 
-    NomeDepartamento = trail[-2] if len(trail) >= 2 else ""
-    NomeCategoria = trail[-1] if len(trail) >= 1 else ""
+        NomeDepartamento = trail[-2] if len(trail) >= 2 else ""
+        NomeCategoria = trail[-1] if len(trail) >= 1 else ""
 
     # --- Extrair variações de tamanho (Colcci) ---
     tamanhos_disponiveis = []
@@ -474,6 +551,25 @@ def extrair_produto(url):
             url_first = parse_srcset(srcset)
             if url_first and "data:image" not in url_first:
                 imgs.append(url_first)
+    else:
+        # Mesmo assim, vamos tentar buscar no HTML para ter mais opções
+        html_imgs = []
+        # <img>
+        for img in soup.select("img"):
+            src = img.get("src") or img.get("data-src") or parse_srcset(img.get("srcset"))
+            if src and "data:image" not in src and "blank" not in src.lower():
+                html_imgs.append(src)
+        # <source srcset>
+        for source in soup.select("source"):
+            srcset = source.get("srcset")
+            url_first = parse_srcset(srcset)
+            if url_first and "data:image" not in url_first:
+                html_imgs.append(url_first)
+        
+        # Adicionar imagens do HTML se não estiverem na lista
+        for img in html_imgs:
+            if img not in imgs:
+                imgs.append(img)
 
     # Dedup mantendo ordem + normaliza para URL absoluta
     seen, ordered = set(), []
@@ -482,12 +578,26 @@ def extrair_produto(url):
         if u_abs not in seen:
             seen.add(u_abs)
             ordered.append(u_abs)
-    imgs = ordered[:5]
+    
+    # Filtrar apenas imagens do produto (que contenham o SKU)
+    imgs_produto = []
+    for img in ordered:
+        if sku in img or any(sku_part in img for sku_part in sku.split('-')[:2]):
+            imgs_produto.append(img)
+    
+    # Se não encontrou imagens específicas do produto, usar as primeiras 5
+    if not imgs_produto:
+        imgs_produto = ordered[:5]
+    
+    imgs = imgs_produto[:5]
 
+    # Gerar baseUrl único para este produto
+    base_url_produto = gerar_base_url_produto(sku, nome)
+    
     # Baixa até 5 imagens
     saved = []
     for i, u in enumerate(imgs, 1):
-        fname = f"{sku}_{i}.jpg"
+        fname = f"{base_url_produto}_{i}.jpg"
         if baixar_imagem(u, fname):
             saved.append(fname)
 
@@ -537,6 +647,7 @@ def extrair_produto(url):
             "_Marca": Marca,
             "_PesoCubico": "",
             "_Preço": preco,
+            "_BaseUrlImagens": base_url_produto,  # URL base para imagens do produto
             "_ImagensSalvas": ";".join(saved),
             "_ImagensURLs": ";".join(imgs),  # útil para POST sku file sem baixar
         })
