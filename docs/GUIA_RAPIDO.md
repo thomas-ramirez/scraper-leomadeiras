@@ -24,6 +24,21 @@
 4. **Marca Padrão**
    - Todos os produtos Colcci → Marca "Colcci"
 
+5. **Upload Automático de Imagens**
+   - Imagens enviadas para GitHub: `https://github.com/thomas-ramirez/imagens-colcci`
+   - 108 imagens disponíveis via URLs públicas
+   - Script automatizado para uploads futuros
+
+6. **Geração de CSV com Links**
+   - CSV com links das imagens: `data/exports/imagens_colcci.csv`
+   - Formato: `skuid,url`
+   - URLs apontando para repositório GitHub
+
+7. **Limpeza e Organização**
+   - Scripts desnecessários removidos
+   - Estrutura simplificada e funcional
+   - Documentação atualizada
+
 ## 🚀 Como Usar
 
 ### 1. Preparar Lista de URLs
@@ -38,9 +53,20 @@ https://www.colcci.com.br/blusa-loose-bordado-360130329-p2450474
 python3 scraper.py
 ```
 
-### 3. Resultado
-- **Planilha**: `data/exports/produtos_vtex.csv`
+### 3. Upload de Imagens (Opcional)
+```bash
+python3 scripts/upload_images.py
+```
+
+### 4. Gerar CSV com Links (Opcional)
+```bash
+python3 scripts/link_github.py
+```
+
+### 5. Resultado
+- **Planilha VTEX**: `data/exports/produtos_vtex.csv`
 - **Imagens**: `data/exports/imagens_produtos/`
+- **CSV com Links**: `data/exports/imagens_colcci.csv`
 
 ## 📊 Exemplo de Saída
 
@@ -52,6 +78,7 @@ python3 scraper.py
 | `_NomeCategoria` | `Vestidos` |
 | `_Marca` | `Colcci` |
 | `_Preço` | `467.00` |
+| `_ImagensURLs` | `https://raw.githubusercontent.com/thomas-ramirez/imagens-colcci/main/440114440_2.jpg;https://raw.githubusercontent.com/thomas-ramirez/imagens-colcci/main/440114440_3.jpg` |
 
 ## 🔧 Configuração
 
@@ -84,6 +111,8 @@ maps = {
 - **Departamentos**: Feminino (54), Masculino (24)
 - **Faixa de preços**: R$ 189,00 - R$ 1.277,00
 - **Marca**: 100% Colcci
+- **Imagens**: 108 imagens no GitHub
+- **CSV com links**: 108 URLs disponíveis
 
 ## 🛠️ Funcionalidades
 
@@ -94,12 +123,35 @@ maps = {
 - [x] Download de imagens
 - [x] Geração de planilha VTEX
 - [x] Suporte a páginas dinâmicas (Playwright)
+- [x] Upload automático de imagens para GitHub
+- [x] Geração de CSV com links das imagens
+- [x] Scripts de automação
+- [x] Limpeza e organização do código
 
-### 🔄 Próximos Passos
-- [ ] Sistema de cache
-- [ ] Validação de dados
-- [ ] Tratamento de erros robusto
-- [ ] Interface web
+### 📁 Estrutura de Arquivos
+```
+colccipoc/
+├── scraper.py                    # Scraper principal
+├── data/
+│   ├── csv/
+│   │   └── produtos_link.csv     # URLs de entrada
+│   └── exports/
+│       ├── produtos_vtex.csv     # Planilha VTEX
+│       ├── imagens_colcci.csv    # CSV com links
+│       └── imagens_produtos/     # Imagens baixadas
+├── scripts/
+│   ├── link_github.py           # Gerar CSV com links
+│   └── upload_images.py         # Upload automático
+└── docs/
+    ├── GUIA_RAPIDO.md           # Este guia
+    └── ESTRUTURA_TECNICA.md     # Documentação técnica
+```
+
+## 🔗 Links Importantes
+
+- **Repositório Principal**: `https://github.com/thomas-ramirez/scraper-poc`
+- **Imagens**: `https://github.com/thomas-ramirez/imagens-colcci`
+- **URLs das Imagens**: `https://raw.githubusercontent.com/thomas-ramirez/imagens-colcci/main/{arquivo}`
 
 ## 🚨 Limitações Conhecidas
 
