@@ -17,7 +17,7 @@ except Exception:
 downloads_path = str(Path.home() / "Downloads")
 current_dir = os.path.dirname(os.path.abspath(__file__))  # Pasta atual do script
 
-input_csv = os.path.join(downloads_path, "produtos_link.csv")
+input_csv = os.path.join(current_dir, "data", "csv", "produtos_link.csv")
 output_csv = os.path.join(current_dir, "data", "exports", "produtos_vtex.csv")
 output_folder = os.path.join(current_dir, "data", "exports", "imagens_produtos")
 
@@ -46,42 +46,43 @@ session.mount(
 # === Mapeamentos VTEX (IDs) ===
 maps = {
     "departamento": {
-        "Auto Peças": "1",
-        "Acessórios": "2", 
-        "Pneus": "3",
-        "Óleos e Lubrificantes": "4",
-        "Filtros": "5",
-        "Freios": "6",
-        "Suspensão": "7",
-        "Motor": "8",
-        "Elétrica": "9",
-        "Carroceria": "10",
+        "Feminino": "1",
+        "Masculino": "2", 
+        "Acessórios": "3",
+        "Calçados": "4",
+        "Bolsas": "5",
+        "Bijuterias": "6",
+        "Perfumes": "7",
+        "Esportes": "8",
+        "Praia": "9",
+        "Festa": "10",
         # Adicione mais conforme necessário
     },
     "categoria": {
-        "Pneus": "1",
-        "Óleos": "2",
-        "Filtros de Ar": "3",
-        "Filtros de Óleo": "4",
-        "Pastilhas de Freio": "5",
-        "Amortecedores": "6",
-        "Baterias": "7",
-        "Lâmpadas": "8",
-        "Espelhos": "9",
-        "Tapetes": "10",
+        "Vestidos": "1",
+        "Blusas": "2",
+        "Calças": "3",
+        "Saias": "4",
+        "Blazers": "5",
+        "Camisetas": "6",
+        "Camisas": "7",
+        "Bermudas": "8",
+        "Jaquetas": "9",
+        "Regatas": "10",
+        "Shorts": "11",
+        "Macacões": "12",
+        "Tops": "13",
+        "Cardigãs": "14",
+        "Casacos": "15",
         # Adicione mais conforme necessário
     },
     "marca": {
-        "Pirelli": "1",
-        "Michelin": "2",
-        "Bridgestone": "3",
-        "Shell": "4",
-        "Mobil": "5",
-        "Castrol": "6",
-        "Bosch": "7",
-        "NGK": "8",
-        "Valeo": "9",
-        "Continental": "10",
+        "Colcci": "1",
+        "Colcci Jeans": "2",
+        "Colcci Sport": "3",
+        "Colcci Beach": "4",
+        "Colcci Festa": "5",
+        "Colcci Acessórios": "6",
         # Adicione mais conforme necessário
     }
 }
@@ -364,19 +365,24 @@ def extrair_produto(url):
 
 
     
-    # Fallback: breadcrumb genérico se schema.org não encontrado
-    if not NomeDepartamento and not NomeCategoria:
-        trail = [limpar(a.get_text()) for a in soup.select(
-            "nav.breadcrumb a, .breadcrumb a, .breadcrumbs a, a.breadcrumbs-href, .breadcrumb-item a, .breadcrumb-nav a, [class*='breadcrumb'] a"
-        )]
-        trail = [t for t in trail if t and t.lower() not in ("início", "inicio", "home")]
+            # Fallback: breadcrumb genérico se schema.org não encontrado
+        if not NomeDepartamento and not NomeCategoria:
+            trail = [limpar(a.get_text()) for a in soup.select(
+                "nav.breadcrumb a, .breadcrumb a, .breadcrumbs a, a.breadcrumbs-href, .breadcrumb-item a, .breadcrumb-nav a, [class*='breadcrumb'] a"
+            )]
+            trail = [t for t in trail if t and t.lower() not in ("início", "inicio", "home")]
 
-        nome_h1 = limpar(soup.select_one("div.product-name h1, h1").get_text()) if soup.select_one("div.product-name h1, h1") else ""
-        if trail and nome_h1 and trail[-1][:20].lower() in nome_h1[:20].lower():
-            trail = trail[:-1]
+            nome_h1 = limpar(soup.select_one("div.product-name h1, h1").get_text()) if soup.select_one("div.product-name h1, h1") else ""
+            if trail and nome_h1 and trail[-1][:20].lower() in nome_h1[:20].lower():
+                trail = trail[:-1]
 
-        NomeDepartamento = trail[-2] if len(trail) >= 2 else ""
-        NomeCategoria = trail[-1] if len(trail) >= 1 else ""
+            # Para Colcci, se encontrou "Roupas" no breadcrumb, usar como departamento
+            if trail and "roupas" in trail[-1].lower():
+                NomeDepartamento = "Feminino"  # Colcci é focado em moda feminina
+                NomeCategoria = "Vestidos"  # Categoria padrão para vestidos
+            else:
+                NomeDepartamento = trail[-2] if len(trail) >= 2 else ""
+                NomeCategoria = trail[-1] if len(trail) >= 1 else ""
 
     # --- Extrair variações de tamanho (Colcci) ---
     tamanhos_disponiveis = []
@@ -431,27 +437,58 @@ def extrair_produto(url):
     # Fallback: extrair categoria/departamento do nome do produto
     if not NomeDepartamento or not NomeCategoria:
         nome_lower = nome.lower()
-        if "pneu" in nome_lower:
-            NomeDepartamento = "Auto Peças"
-            NomeCategoria = "Pneus"
-        elif "óleo" in nome_lower or "oleo" in nome_lower:
-            NomeDepartamento = "Auto Peças"
-            NomeCategoria = "Óleos"
-        elif "filtro" in nome_lower:
-            NomeDepartamento = "Auto Peças"
-            NomeCategoria = "Filtros"
-        elif "freio" in nome_lower or "embreagem" in nome_lower:
-            NomeDepartamento = "Auto Peças"
-            NomeCategoria = "Freios"
-        elif "chave" in nome_lower or "ferramenta" in nome_lower:
-            NomeDepartamento = "Acessórios"
-            NomeCategoria = "Ferramentas"
-        elif "alto-falante" in nome_lower or "som" in nome_lower:
-            NomeDepartamento = "Acessórios"
-            NomeCategoria = "Som"
+        
+        # Para Colcci, sempre usar Feminino como departamento padrão
+        if "colcci.com.br" in url:
+            NomeDepartamento = "Feminino"
         else:
-            NomeDepartamento = "Auto Peças"
-            NomeCategoria = "Outros"
+            # Detectar departamento (Feminino/Masculino)
+            if any(palavra in nome_lower for palavra in ["feminino", "feminina", "mulher", "mulheres"]):
+                NomeDepartamento = "Feminino"
+            elif any(palavra in nome_lower for palavra in ["masculino", "masculina", "homem", "homens"]):
+                NomeDepartamento = "Masculino"
+            else:
+                # Tentar detectar pelo tipo de produto
+                if any(palavra in nome_lower for palavra in ["vestido", "blusa", "saia", "blazer", "cardigã", "macacão"]):
+                    NomeDepartamento = "Feminino"
+                elif any(palavra in nome_lower for palavra in ["camisa", "camiseta", "bermuda", "calça", "jaqueta"]):
+                    NomeDepartamento = "Masculino"
+                else:
+                    NomeDepartamento = "Feminino"  # Default para Colcci
+        
+        # Detectar categoria específica
+        if "vestido" in nome_lower:
+            NomeCategoria = "Vestidos"
+        elif "blusa" in nome_lower:
+            NomeCategoria = "Blusas"
+        elif "calça" in nome_lower or "calca" in nome_lower:
+            NomeCategoria = "Calças"
+        elif "saia" in nome_lower:
+            NomeCategoria = "Saias"
+        elif "blazer" in nome_lower:
+            NomeCategoria = "Blazers"
+        elif "camiseta" in nome_lower:
+            NomeCategoria = "Camisetas"
+        elif "camisa" in nome_lower:
+            NomeCategoria = "Camisas"
+        elif "bermuda" in nome_lower:
+            NomeCategoria = "Bermudas"
+        elif "jaqueta" in nome_lower:
+            NomeCategoria = "Jaquetas"
+        elif "regata" in nome_lower:
+            NomeCategoria = "Regatas"
+        elif "short" in nome_lower:
+            NomeCategoria = "Shorts"
+        elif "macacão" in nome_lower or "macacao" in nome_lower:
+            NomeCategoria = "Macacões"
+        elif "top" in nome_lower:
+            NomeCategoria = "Tops"
+        elif "cardigã" in nome_lower or "cardiga" in nome_lower:
+            NomeCategoria = "Cardigãs"
+        elif "casaco" in nome_lower:
+            NomeCategoria = "Casacos"
+        else:
+            NomeCategoria = "Vestidos"  # Default para Colcci
 
     # SKU: reúne candidatos -> escolhe o 1º não vazio
     sku_candidates = []
@@ -508,19 +545,28 @@ def extrair_produto(url):
     if not Marca:
         nome_lower = nome.lower()
         marcas_conhecidas = [
-            "pirelli", "michelin", "bridgestone", "shell", "mobil", "castrol", 
-            "bosch", "ngk", "valeo", "continental", "skf", "trw", "varga",
-            "lng", "rochepecas", "vannucci", "wega", "aje", "bravox", "kraucher",
-            "waft", "mecarm", "nytron", "cummins", "ford", "mercedes", "volvo",
-            "renault", "fiat", "iveco", "volkswagen", "hyundai", "alfa romeo"
+            "colcci", "colcci jeans", "colcci sport", "colcci beach", 
+            "colcci festa", "colcci acessórios", "colcci acessorios"
         ]
         
         for marca in marcas_conhecidas:
             if marca in nome_lower:
                 Marca = marca.title()
                 break
+        
+        # Se não encontrou marca específica, usar Colcci como padrão
+        if not Marca:
+            Marca = "Colcci"
 
     # --- IDs VTEX via mapeamento local ---
+    # Para Colcci, detectar se é produto masculino ou feminino
+    if "colcci.com.br" in url:
+        nome_lower = nome.lower()
+        if any(palavra in nome_lower for palavra in ["masculina", "masculino", "homem", "homens"]):
+            NomeDepartamento = "Masculino"
+        else:
+            NomeDepartamento = "Feminino"
+    
     _IDDepartamento = maps["departamento"].get(NomeDepartamento, "")
     _IDCategoria = maps["categoria"].get(NomeCategoria, "")
     _IDMarca = maps["marca"].get(Marca, "")
@@ -584,7 +630,7 @@ def extrair_produto(url):
     # Baixa até 5 imagens
     saved = []
     for i, u in enumerate(imgs, 1):
-        fname = f"{base_url_produto}_{i}.jpg"
+        fname = f"{sku}_{i}.jpg"
         if baixar_imagem(u, fname):
             saved.append(fname)
 

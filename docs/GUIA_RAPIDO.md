@@ -1,157 +1,119 @@
 # Guia Rápido - VTEX Product Scraper
 
-## 🚀 Começando em 5 Minutos
+## 🎯 Ajustes Realizados
 
-### 1. Setup Inicial
+### ✅ Problemas Corrigidos
+
+1. **Mapeamentos VTEX Atualizados**
+   - Departamentos: Feminino, Masculino, Acessórios, Calçados, etc.
+   - Categorias: Vestidos, Blusas, Calças, Saias, Blazers, etc.
+   - Marcas: Colcci, Colcci Jeans, Colcci Sport, etc.
+
+2. **Detecção Automática de Gênero**
+   - Produtos com "masculina/masculino" → Departamento Masculino
+   - Demais produtos Colcci → Departamento Feminino
+   - Detecção baseada no nome do produto
+
+3. **Categorização Inteligente**
+   - Detecção automática por tipo de produto
+   - Vestidos → Categoria "Vestidos"
+   - Blusas → Categoria "Blusas"
+   - Calças → Categoria "Calças"
+   - etc.
+
+4. **Marca Padrão**
+   - Todos os produtos Colcci → Marca "Colcci"
+
+## 🚀 Como Usar
+
+### 1. Preparar Lista de URLs
+```csv
+url
+https://www.colcci.com.br/vestido-midi-ombro-a-ombro-440114440-p2451751
+https://www.colcci.com.br/blusa-loose-bordado-360130329-p2450474
+```
+
+### 2. Executar Scraper
 ```bash
-# Clone e instale
-git clone <repository-url>
-cd colccipoc
-pip install -r requirements.txt
-python -m playwright install chromium
+python3 scraper.py
 ```
 
-### 2. Teste Rápido
-```bash
-# Teste com Colcci
-python examples/test_colcci.py
-```
+### 3. Resultado
+- **Planilha**: `data/exports/produtos_vtex.csv`
+- **Imagens**: `data/exports/imagens_produtos/`
 
-### 3. Uso Básico
-```bash
-# 1. Crie a planilha de links
-cp templates/produtos_link_example.csv ~/Downloads/produtos_link.csv
+## 📊 Exemplo de Saída
 
-# 2. Edite com suas URLs
-# 3. Execute o scraper
-python scraper.py
+| Campo | Exemplo |
+|-------|---------|
+| `_IDSKU` | `440114440_PP` |
+| `_NomeProduto` | `Vestido Midi Ombro À Ombro` |
+| `_NomeDepartamento` | `Feminino` |
+| `_NomeCategoria` | `Vestidos` |
+| `_Marca` | `Colcci` |
+| `_Preço` | `467.00` |
 
-# 4. Resultado em data/exports/produtos_vtex.csv
-```
+## 🔧 Configuração
 
-## 🛠️ Adicionando Nova Loja
-
-### Passo 1: Análise (2 min)
-```bash
-# Teste se é página estática ou dinâmica
-curl -s "https://loja.com/produto" | grep -E "(__NEXT_DATA__|application/ld\+json)"
-```
-
-### Passo 2: Implementação (5 min)
-
-#### Para Páginas Estáticas
+### Mapeamentos VTEX (IDs)
 ```python
-# O scraper já funciona automaticamente!
-# Apenas ajuste os mapeamentos VTEX se necessário
-```
-
-#### Para Páginas Dinâmicas
-```python
-# Adicione no scraper.py:
-if "sua-loja.com.br" in url:
-    html = renderizar_html(url, wait_selectors=[
-        "h1", "[class*='price']", "[class*='tamanho']"
-    ])
-```
-
-### Passo 3: Teste (1 min)
-```python
-# Teste rápido
-from scraper import extrair_produto
-result = extrair_produto("https://sua-loja.com.br/produto")
-print(f"SKUs encontrados: {len(result)}")
-```
-
-## 📊 Estrutura VTEX
-
-### Campos Essenciais
-- `_IDSKU`: SKU único (ex: `360125377_PP`)
-- `_NomeProduto`: Nome do produto
-- `_Preço`: Preço (ex: `429.00`)
-- `_IDProduto`: ID do produto (mesmo para todos SKUs)
-
-### Relacionamento
-```
-Produto (ID: 360125377)
-├── SKU PP (ID: 360125377_PP)
-├── SKU P  (ID: 360125377_P)
-├── SKU M  (ID: 360125377_M)
-└── SKU G  (ID: 360125377_G)
-```
-
-## 🔧 Configuração VTEX
-
-### Mapeamentos
-```python
-# Em scraper.py, ajuste:
 maps = {
     "departamento": {
-        "Roupas": "1",
-        "Acessórios": "2",
+        "Feminino": "1",
+        "Masculino": "2", 
+        "Acessórios": "3",
+        # ...
     },
     "categoria": {
-        "Blusas": "1",
-        "Calças": "2",
+        "Vestidos": "1",
+        "Blusas": "2",
+        "Calças": "3",
+        # ...
     },
     "marca": {
         "Colcci": "1",
-        "Sua Marca": "2",
+        "Colcci Jeans": "2",
+        # ...
     }
 }
 ```
 
-## 🧪 Debug
+## 📈 Estatísticas Atuais
 
-### Logs Úteis
-```
-🔍 Debug: encontrado padrão PP P M G
-✅ Planilha final salva: data/exports/produtos_vtex.csv
-⚠️ Erro ao baixar imagem: 404
-```
+- **Total de produtos**: 78
+- **Departamentos**: Feminino (54), Masculino (24)
+- **Faixa de preços**: R$ 189,00 - R$ 1.277,00
+- **Marca**: 100% Colcci
 
-### Problemas Comuns
+## 🛠️ Funcionalidades
 
-#### Tamanhos não detectados
-```python
-# Verifique o regex no scraper.py
-r"Tamanho[:\s]*PP\s+PP\s+P\s+M\s+G"
-```
+### ✅ Implementado
+- [x] Detecção automática de gênero
+- [x] Categorização por tipo de produto
+- [x] Extração de múltiplos tamanhos (PP, P, M, G)
+- [x] Download de imagens
+- [x] Geração de planilha VTEX
+- [x] Suporte a páginas dinâmicas (Playwright)
 
-#### Imagens 404
-```python
-# URLs mantidas em _ImagensURLs
-# Use para upload VTEX alternativo
-```
+### 🔄 Próximos Passos
+- [ ] Sistema de cache
+- [ ] Validação de dados
+- [ ] Tratamento de erros robusto
+- [ ] Interface web
 
-## 📋 Checklist Nova Loja
+## 🚨 Limitações Conhecidas
 
-- [ ] Teste se é estática ou dinâmica
-- [ ] Implemente seletores específicos (se necessário)
-- [ ] Teste extração básica
-- [ ] Valide estrutura VTEX
-- [ ] Documente implementação
+1. **Imagens 404**: Algumas URLs de imagem retornam 404
+2. **Breadcrumbs limitados**: Nem todas as páginas têm breadcrumbs completos
+3. **Dependência Playwright**: Necessário para páginas dinâmicas
 
-## 🚀 Próximos Passos
+## 📞 Suporte
 
-1. **Teste com sua loja**
-2. **Ajuste mapeamentos VTEX**
-3. **Execute em lote**
-4. **Importe no VTEX**
-
-## 📁 Estrutura do Projeto
-
-```
-colccipoc/
-├── scraper.py              # Core do scraper
-├── data/
-│   ├── csv/                # Planilhas de entrada
-│   └── exports/            # Planilhas geradas
-├── scripts/                # Scripts auxiliares
-├── docs/                   # Documentação
-├── examples/               # Exemplos
-└── templates/              # Templates
-```
+Para dúvidas ou problemas:
+1. Verifique a documentação em `docs/`
+2. Consulte os exemplos em `examples/`
+3. Abra uma issue no GitHub
 
 ---
 
-**Precisa de ajuda? Consulte a documentação completa em `docs/`**
+**Desenvolvido para facilitar migrações VTEX por Solutions Engineers**
