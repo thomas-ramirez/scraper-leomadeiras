@@ -1,42 +1,31 @@
-# Scripts Auxiliares
+# Scripts do VTEX Product Scraper
 
-Esta pasta contém scripts auxiliares para desenvolvimento e debug do VTEX Product Scraper.
+Scripts auxiliares para o VTEX Product Scraper.
 
 ## 📁 Arquivos
 
-### `check_fields.py`
-Script para verificar e validar campos extraídos dos produtos.
-- Valida estrutura dos dados
-- Verifica campos obrigatórios
-- Gera relatórios de qualidade
-
-### `debug_scraper.py`
-Script para debug e análise do scraper.
-- Testa extração de produtos individuais
-- Analisa estrutura HTML das páginas
-- Identifica problemas de extração
-
 ### `link_github.py`
-Script para integração com GitHub.
-- Criação de repositórios
-- Upload de arquivos
-- Configuração de workflows
-
-## 🚀 Como Usar
-
+Gera CSV com links das imagens no GitHub.
 ```bash
-# Verificar campos extraídos
-python scripts/check_fields.py
-
-# Debug de extração
-python scripts/debug_scraper.py
-
-# Configurar GitHub
-python scripts/link_github.py
+python3 scripts/link_github.py
 ```
 
-## 📝 Notas
+### `upload_images.py`
+Automatiza upload de imagens para o repositório GitHub.
+```bash
+python3 scripts/upload_images.py
+```
 
-- Estes scripts são auxiliares e não são necessários para o uso básico do scraper
-- Use apenas se precisar de funcionalidades específicas de debug ou desenvolvimento
-- Consulte a documentação principal em `../docs/` para uso do scraper
+### `imagens_colcci.csv`
+CSV com links das imagens (108 imagens).
+- Formato: `skuid,url`
+- Base URL: `https://raw.githubusercontent.com/thomas-ramirez/imagens-colcci/main/`
+
+## 🚀 Fluxo de Trabalho
+
+1. **Executar scraper**: `python3 scraper.py`
+2. **Upload imagens**: `python3 scripts/upload_images.py`
+3. **Gerar links**: `python3 scripts/link_github.py`
+
+---
+**VTEX Product Scraper** - Scripts auxiliares
