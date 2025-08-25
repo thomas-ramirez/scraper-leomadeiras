@@ -6,9 +6,6 @@ from pathlib import Path
 # Caminho para a pasta onde estão as imagens
 folder_path = Path.cwd() / 'data' / 'exports' / 'imagens_produtos'
 
-# Pasta atual do script
-current_dir = Path(__file__).parent
-
 # Hash do commit usado nas URLs (atualizar quando necessário)
 commit_hash = "main"  # ou usar um hash específico se necessário
 base_url = f"https://raw.githubusercontent.com/thomas-ramirez/imagens-colcci/{commit_hash}/"
@@ -24,8 +21,8 @@ for filename in os.listdir(folder_path):
             url = f"{base_url}{filename}"
             rows.append([skuid, url])
 
-# ✅ Salvar o CSV na pasta atual do script (autopoc)
-csv_path = current_dir / 'imagens_colcci.csv'
+# ✅ Salvar o CSV na pasta exports (mesmo local das imagens)
+csv_path = folder_path.parent / 'imagens_colcci.csv'
 with open(csv_path, mode='w', newline='', encoding='utf-8') as file:
     writer = csv.writer(file)
     writer.writerow(['skuid', 'url'])

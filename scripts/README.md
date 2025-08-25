@@ -18,6 +18,7 @@ python3 scripts/upload_images.py
 
 ### `imagens_colcci.csv`
 CSV com links das imagens (108 imagens).
+- **Localização**: `data/exports/imagens_colcci.csv`
 - Formato: `skuid,url`
 - Base URL: `https://raw.githubusercontent.com/thomas-ramirez/imagens-colcci/main/`
 
