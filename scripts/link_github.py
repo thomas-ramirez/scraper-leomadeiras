@@ -11,7 +11,7 @@ current_dir = Path(__file__).parent
 
 # Hash do commit usado nas URLs (atualizar quando necessário)
 commit_hash = "main"  # ou usar um hash específico se necessário
-base_url = f"https://raw.githubusercontent.com/thomas-ramirez/imagens-mercadocar/{commit_hash}/"
+base_url = f"https://raw.githubusercontent.com/thomas-ramirez/imagens-colcci/{commit_hash}/"
 
 rows = []
 
@@ -25,7 +25,7 @@ for filename in os.listdir(folder_path):
             rows.append([skuid, url])
 
 # ✅ Salvar o CSV na pasta atual do script (autopoc)
-csv_path = current_dir / 'imagens_mercadocar.csv'
+csv_path = current_dir / 'imagens_colcci.csv'
 with open(csv_path, mode='w', newline='', encoding='utf-8') as file:
     writer = csv.writer(file)
     writer.writerow(['skuid', 'url'])
