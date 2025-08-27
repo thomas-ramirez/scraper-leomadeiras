@@ -384,67 +384,98 @@ def extrair_produto(url):
     NomeDepartamento = ""
     NomeCategoria = ""
     
-    # Buscar breadcrumb estruturado (schema.org)
-    breadcrumb_list = soup.find("ul", {"itemtype": "http://schema.org/BreadcrumbList"})
-    if breadcrumb_list:
-        breadcrumb_items = breadcrumb_list.find_all("li", {"itemprop": "itemListElement"})
-        
-
-        
-        # Extrair nomes dos breadcrumbs
-        breadcrumb_names = []
-        for i, item in enumerate(breadcrumb_items):
-            # Primeiro, verificar se tem <strong> (nome do produto)
-            strong_tag = item.find("strong")
-            if strong_tag:
-                name = limpar(strong_tag.get_text())
-                breadcrumb_names.append(name)
-            else:
-                # Buscar o nome dentro do item
-                name_span = item.find("span", {"itemprop": "name"})
-                if name_span:
-                    name = limpar(name_span.get_text())
-                    breadcrumb_names.append(name)
-                else:
-                    # Fallback: buscar em link ou texto direto
+    # Para Koerich, buscar especificamente na div .category
+    if "koerich.com.br" in url:
+        category_div = soup.find("div", class_="category")
+        if category_div:
+            breadcrumb_ul = category_div.find("ul", id="breadcrumbTrail")
+            if breadcrumb_ul:
+                breadcrumb_items = breadcrumb_ul.find_all("li")
+                breadcrumb_names = []
+                
+                for item in breadcrumb_items:
+                    # Procurar por links ou texto
                     link = item.find("a")
                     if link:
-                        name = limpar(link.get_text())
-                        breadcrumb_names.append(name)
+                        text = limpar(link.get_text())
+                        if text:
+                            breadcrumb_names.append(text)
                     else:
-                        # Texto direto no li
                         text = limpar(item.get_text())
                         if text and text.lower() not in ("você está em:", "you are in:"):
                             breadcrumb_names.append(text)
-        
-        # Filtrar breadcrumbs válidos (remover "Página Inicial", "Início", etc.)
-        breadcrumb_names = [name for name in breadcrumb_names if name and name.lower() not in ("início", "inicio", "home", "página inicial")]
-        
-        # Atribuir departamento e categoria
-        if len(breadcrumb_names) >= 2:
-            NomeDepartamento = breadcrumb_names[-2]  # Penúltimo item
-            NomeCategoria = breadcrumb_names[-1]     # Último item
-        elif len(breadcrumb_names) == 1:
-            NomeCategoria = breadcrumb_names[0]
-            
-
-
+                
+                # Filtrar breadcrumbs válidos (remover "Home", "Início", etc.)
+                breadcrumb_names = [name for name in breadcrumb_names if name and name.lower() not in ("início", "inicio", "home", "página inicial")]
+                
+                # Para Koerich, o último item é o nome do produto, não a categoria
+                # Pegar o penúltimo como categoria e o antepenúltimo como departamento
+                if len(breadcrumb_names) >= 3:
+                    NomeDepartamento = breadcrumb_names[-3]  # Antepenúltimo item (ex: "Eletrodomésticos")
+                    NomeCategoria = breadcrumb_names[-2]     # Penúltimo item (ex: "Fogão")
+                elif len(breadcrumb_names) == 2:
+                    NomeDepartamento = breadcrumb_names[0]   # Primeiro item
+                    NomeCategoria = breadcrumb_names[1]      # Segundo item
+                elif len(breadcrumb_names) == 1:
+                    NomeCategoria = breadcrumb_names[0]
     
-            # Fallback: breadcrumb genérico se schema.org não encontrado
-        if not NomeDepartamento and not NomeCategoria:
-            trail = [limpar(a.get_text()) for a in soup.select(
-                "nav.breadcrumb a, .breadcrumb a, .breadcrumbs a, a.breadcrumbs-href, .breadcrumb-item a, .breadcrumb-nav a, [class*='breadcrumb'] a"
-            )]
-            trail = [t for t in trail if t and t.lower() not in ("início", "inicio", "home")]
+    # Se não encontrou breadcrumb específico do Koerich, tentar schema.org
+    if not NomeDepartamento and not NomeCategoria:
+        breadcrumb_list = soup.find("ul", {"itemtype": "http://schema.org/BreadcrumbList"})
+        if breadcrumb_list:
+            breadcrumb_items = breadcrumb_list.find_all("li", {"itemprop": "itemListElement"})
+            
+            # Extrair nomes dos breadcrumbs
+            breadcrumb_names = []
+            for i, item in enumerate(breadcrumb_items):
+                # Primeiro, verificar se tem <strong> (nome do produto)
+                strong_tag = item.find("strong")
+                if strong_tag:
+                    name = limpar(strong_tag.get_text())
+                    breadcrumb_names.append(name)
+                else:
+                    # Buscar o nome dentro do item
+                    name_span = item.find("span", {"itemprop": "name"})
+                    if name_span:
+                        name = limpar(name_span.get_text())
+                        breadcrumb_names.append(name)
+                    else:
+                        # Fallback: buscar em link ou texto direto
+                        link = item.find("a")
+                        if link:
+                            name = limpar(link.get_text())
+                            breadcrumb_names.append(name)
+                        else:
+                            # Texto direto no li
+                            text = limpar(item.get_text())
+                            if text and text.lower() not in ("você está em:", "you are in:"):
+                                breadcrumb_names.append(text)
+            
+            # Filtrar breadcrumbs válidos (remover "Página Inicial", "Início", etc.)
+            breadcrumb_names = [name for name in breadcrumb_names if name and name.lower() not in ("início", "inicio", "home", "página inicial")]
+            
+            # Atribuir departamento e categoria
+            if len(breadcrumb_names) >= 2:
+                NomeDepartamento = breadcrumb_names[-2]  # Penúltimo item
+                NomeCategoria = breadcrumb_names[-1]     # Último item
+            elif len(breadcrumb_names) == 1:
+                NomeCategoria = breadcrumb_names[0]
 
-            nome_h1 = limpar(soup.select_one("div.product-name h1, h1").get_text()) if soup.select_one("div.product-name h1, h1") else ""
-            if trail and nome_h1 and trail[-1][:20].lower() in nome_h1[:20].lower():
-                trail = trail[:-1]
+    # Fallback: breadcrumb genérico se schema.org não encontrado
+    if not NomeDepartamento and not NomeCategoria:
+        trail = [limpar(a.get_text()) for a in soup.select(
+            "nav.breadcrumb a, .breadcrumb a, .breadcrumbs a, a.breadcrumbs-href, .breadcrumb-item a, .breadcrumb-nav a, [class*='breadcrumb'] a"
+        )]
+        trail = [t for t in trail if t and t.lower() not in ("início", "inicio", "home")]
 
-            # Para Koerich, usar breadcrumb para detectar departamento/categoria
-            if trail:
-                NomeDepartamento = trail[-2] if len(trail) >= 2 else ""
-                NomeCategoria = trail[-1] if len(trail) >= 1 else ""
+        nome_h1 = limpar(soup.select_one("div.product-name h1, h1").get_text()) if soup.select_one("div.product-name h1, h1") else ""
+        if trail and nome_h1 and trail[-1][:20].lower() in nome_h1[:20].lower():
+            trail = trail[:-1]
+
+        # Para Koerich, usar breadcrumb para detectar departamento/categoria
+        if trail:
+            NomeDepartamento = trail[-2] if len(trail) >= 2 else ""
+            NomeCategoria = trail[-1] if len(trail) >= 1 else ""
 
     # --- Extrair variações de tamanho ---
     tamanhos_disponiveis = []
