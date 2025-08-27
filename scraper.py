@@ -46,43 +46,47 @@ session.mount(
 # === Mapeamentos VTEX (IDs) ===
 maps = {
     "departamento": {
-        "Feminino": "1",
-        "Masculino": "2", 
-        "Acessórios": "3",
-        "Calçados": "4",
-        "Bolsas": "5",
-        "Bijuterias": "6",
-        "Perfumes": "7",
-        "Esportes": "8",
-        "Praia": "9",
-        "Festa": "10",
+        "Eletrodomésticos": "1",
+        "Eletroportáteis": "2", 
+        "Ar Condicionado": "3",
+        "Aquecimento": "4",
+        "Ventilação": "5",
+        "Refrigeração": "6",
+        "Lavagem": "7",
+        "Cozinha": "8",
+        "Limpeza": "9",
+        "Pequenos Eletrodomésticos": "10",
         # Adicione mais conforme necessário
     },
     "categoria": {
-        "Vestidos": "1",
-        "Blusas": "2",
-        "Calças": "3",
-        "Saias": "4",
-        "Blazers": "5",
-        "Camisetas": "6",
-        "Camisas": "7",
-        "Bermudas": "8",
-        "Jaquetas": "9",
-        "Regatas": "10",
-        "Shorts": "11",
-        "Macacões": "12",
-        "Tops": "13",
-        "Cardigãs": "14",
-        "Casacos": "15",
+        "Frigobar": "1",
+        "Freezer": "2",
+        "Refrigerador": "3",
+        "Ar Condicionado": "4",
+        "Ventilador": "5",
+        "Aquecedor": "6",
+        "Máquina de Lavar": "7",
+        "Secadora": "8",
+        "Fogão": "9",
+        "Microondas": "10",
+        "Liquidificador": "11",
+        "Mixer": "12",
+        "Processador": "13",
+        "Aspirador": "14",
+        "Ferro de Passar": "15",
         # Adicione mais conforme necessário
     },
     "marca": {
-        "Colcci": "1",
-        "Colcci Jeans": "2",
-        "Colcci Sport": "3",
-        "Colcci Beach": "4",
-        "Colcci Festa": "5",
-        "Colcci Acessórios": "6",
+        "Midea": "1",
+        "Electrolux": "2",
+        "Brastemp": "3",
+        "Consul": "4",
+        "Panasonic": "5",
+        "Samsung": "6",
+        "LG": "7",
+        "Philco": "8",
+        "GE": "9",
+        "Whirlpool": "10",
         # Adicione mais conforme necessário
     }
 }
@@ -124,12 +128,31 @@ def get_jsonld(soup):
     return None
 
 def parse_srcset(srcset):
-    # retorna a 1ª URL do srcset
-    # ex: "https://a.jpg 1x, https://b.jpg 2x" -> "https://a.jpg"
+    # retorna a URL com maior resolução do srcset
+    # ex: "https://a.jpg 1x, https://b.jpg 2x" -> "https://b.jpg"
     if not srcset:
         return ""
-    first = srcset.split(",")[0].strip().split(" ")[0].strip()
-    return first
+    
+    parts = srcset.split(",")
+    best_url = ""
+    best_density = 0
+    
+    for part in parts:
+        part = part.strip()
+        if ' ' in part:
+            url_part, density_part = part.rsplit(' ', 1)
+            try:
+                # Remove 'x' e converte para float
+                density = float(density_part.replace('x', '').replace('w', ''))
+                if density > best_density:
+                    best_density = density
+                    best_url = url_part.strip()
+            except:
+                # Se não conseguir parsear, usa a primeira URL
+                if not best_url:
+                    best_url = url_part.strip()
+    
+    return best_url if best_url else parts[0].strip().split(" ")[0].strip()
 
 @contextmanager
 def _playwright_context():
@@ -180,12 +203,44 @@ def gerar_base_url_produto(sku, nome):
 
 def baixar_imagem(url_img, fname):
     try:
-        with session.get(url_img, stream=True, timeout=20) as resp:
+        # Adicionar headers para tentar obter imagem em melhor qualidade
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+            'Accept-Encoding': 'identity',
+            'Referer': 'https://www.koerich.com.br/',
+        }
+        
+        with session.get(url_img, headers=headers, stream=True, timeout=30) as resp:
             resp.raise_for_status()
+            
+            # Verificar se é realmente uma imagem
+            content_type = resp.headers.get('content-type', '')
+            if not content_type.startswith('image/'):
+                print(f"⚠️ URL não é uma imagem: {content_type}")
+                return False
+            
+            # Verificar tamanho da imagem
+            content_length = resp.headers.get('content-length')
+            if content_length:
+                size_kb = int(content_length) / 1024
+                if size_kb < 1:  # Menos de 1KB, provavelmente thumbnail
+                    print(f"⚠️ Imagem muito pequena ({size_kb:.1f}KB), pode ser thumbnail")
+            
             with open(os.path.join(output_folder, fname), "wb") as f:
                 for chunk in resp.iter_content(8192):
                     if chunk:
                         f.write(chunk)
+        
+        # Verificar se o arquivo foi criado e tem tamanho mínimo
+        file_path = os.path.join(output_folder, fname)
+        if os.path.exists(file_path):
+            file_size = os.path.getsize(file_path)
+            if file_size < 1024:  # Menos de 1KB
+                print(f"⚠️ Arquivo muito pequeno ({file_size} bytes): {fname}")
+                return False
+        
         return True
     except Exception as e:
         print(f"⚠️ Erro ao baixar imagem {url_img}: {e}")
@@ -193,19 +248,23 @@ def baixar_imagem(url_img, fname):
 
 # === Core ===
 def extrair_produto(url):
-    # Colcci entrega conteúdo via JS; usar Playwright para renderizar
-    if "colcci.com.br" in url:
+    # Koerich entrega conteúdo via JS; usar Playwright para renderizar
+    if "koerich.com.br" in url:
         try:
             html = renderizar_html(
                 url,
                 wait_selectors=[
                     "h1", 
-                    "[class*='breadcrumb'] a",
-                    "[class*='price'], [class*='preco'], [class*='valor']",
+                    ".product-name",
+                    ".product-price",
+                    ".product-images",
+                    ".about-product",
+                    ".specifications"
                 ],
-                timeout_ms=20000,
+                timeout_ms=30000,
             )
-        except Exception:
+        except Exception as e:
+            print(f"⚠️ Erro com Playwright para {url}: {e}")
             # fallback: tentar HTML não renderizado
             r = session.get(url, timeout=20)
             r.raise_for_status()
@@ -266,10 +325,10 @@ def extrair_produto(url):
             except Exception:
                 pass
 
-    # --- HTML Fallbacks (MercadoCar) ---
+    # --- HTML Fallbacks (Koerich/MercadoCar) ---
     # Nome do produto
     if not nome:
-        for sel in ["div.product-name h1", "h1"]:
+        for sel in [".product-name h1", "h1.product-name", "h1", ".product-title"]:
             tag = soup.select_one(sel)
             if tag and tag.get_text(strip=True):
                 nome = limpar(tag.get_text(strip=True))
@@ -288,32 +347,38 @@ def extrair_produto(url):
     if not preco:
         preco = parse_preco(soup.get_text(" ", strip=True))
 
-    # Descrição: classes típicas MercadoCar + fallback por texto âncora
+    # Descrição: classes específicas Koerich + fallbacks
     if not descricao:
-        for sel in [".full-description", ".product-description", ".descriptions-text", ".productDetails", ".descricao"]:
-            tag = soup.select_one(sel)
-            if tag and tag.get_text(strip=True):
-                descricao = limpar(tag.get_text(" ", strip=True))
-                break
+        # Koerich: procurar seções específicas
+        if "koerich.com.br" in url:
+            # Seção "Sobre o Produto"
+            about_section = soup.select_one(".about-product")
+            if about_section:
+                descricao = limpar(about_section.get_text(" ", strip=True))
+            
+            # Se não encontrou, procurar especificações
+            if not descricao:
+                specs_section = soup.select_one(".specifications")
+                if specs_section:
+                    descricao = limpar(specs_section.get_text(" ", strip=True))
+            
+            # Fallback: procurar por classes genéricas de descrição
+            if not descricao:
+                for sel in [".product-description", ".description", ".product-details", ".product-info"]:
+                    tag = soup.select_one(sel)
+                    if tag and tag.get_text(strip=True):
+                        descricao = limpar(tag.get_text(" ", strip=True))
+                        break
+        
+        # Fallback genérico para outros sites
         if not descricao:
-            t = soup.find(string=lambda s: s and "Aplicável ao(s) veículo(s)" in s)
-            if t:
-                container = t.find_parent(["div", "section", "article"])
-                if container:
-                    descricao = limpar(container.get_text(" ", strip=True))
-    # Fallback adicional (Colcci): procurar blocos com título "Composição" ou "Descrição"
-    if "colcci.com.br" in url and not descricao:
-        # procurar por cabeçalhos ou labels
-        possiveis = []
-        for lab in ("Composição", "Composicao", "Descrição", "Descricao", "Detalhes"):
-            node = soup.find(string=lambda s: isinstance(s, str) and lab.lower() in s.lower())
-            if node:
-                cont = node.find_parent(["div", "section", "article", "li", "p", "dt", "h2", "h3"]) or node.parent
-                if cont:
-                    possiveis.append(limpar(cont.get_text(" ", strip=True)))
-        if possiveis:
-            # escolher o mais longo
-            descricao = max(possiveis, key=len)
+            for sel in [".full-description", ".product-description", ".descriptions-text", ".productDetails", ".descricao"]:
+                tag = soup.select_one(sel)
+                if tag and tag.get_text(strip=True):
+                    descricao = limpar(tag.get_text(" ", strip=True))
+                    break
+        
+
 
         # --- Breadcrumb Schema.org -> Departamento/Categoria ---
     NomeDepartamento = ""
@@ -376,61 +441,43 @@ def extrair_produto(url):
             if trail and nome_h1 and trail[-1][:20].lower() in nome_h1[:20].lower():
                 trail = trail[:-1]
 
-            # Para Colcci, se encontrou "Roupas" no breadcrumb, usar como departamento
-            if trail and "roupas" in trail[-1].lower():
-                NomeDepartamento = "Feminino"  # Colcci é focado em moda feminina
-                NomeCategoria = "Vestidos"  # Categoria padrão para vestidos
-            else:
+            # Para Koerich, usar breadcrumb para detectar departamento/categoria
+            if trail:
                 NomeDepartamento = trail[-2] if len(trail) >= 2 else ""
                 NomeCategoria = trail[-1] if len(trail) >= 1 else ""
 
-    # --- Extrair variações de tamanho (Colcci) ---
+    # --- Extrair variações de tamanho ---
     tamanhos_disponiveis = []
-    if "colcci.com.br" in url:
-        # Procurar por seletores de tamanho na página
-        tamanho_selectors = [
-            "select[name*='tamanho'] option",
-            "select[name*='size'] option", 
-            "[class*='tamanho'] option",
-            "[class*='size'] option",
-            "input[name*='tamanho'][type='radio']",
-            "input[name*='size'][type='radio']",
-            "[data-tamanho]",
-            "[data-size]"
+    
+    # Para Koerich (eletrodomésticos), geralmente não há tamanhos, mas pode haver variações de cor/voltagem
+    if "koerich.com.br" in url:
+        # Procurar por variações de cor ou voltagem
+        variacao_selectors = [
+            "select[name*='cor'] option",
+            "select[name*='voltagem'] option",
+            "select[name*='voltage'] option",
+            "[class*='cor'] option",
+            "[class*='voltagem'] option",
+            "input[name*='cor'][type='radio']",
+            "input[name*='voltagem'][type='radio']"
         ]
         
-        for selector in tamanho_selectors:
+        for selector in variacao_selectors:
             options = soup.select(selector)
             if options:
                 for opt in options:
-                    tamanho = opt.get_text(strip=True) or opt.get("value", "")
-                    if tamanho and tamanho.lower() not in ("selecione", "select", "tamanho", "size", "-"):
-                        tamanhos_disponiveis.append(tamanho)
+                    variacao = opt.get_text(strip=True) or opt.get("value", "")
+                    if variacao and variacao.lower() not in ("selecione", "select", "cor", "voltagem", "-"):
+                        tamanhos_disponiveis.append(variacao)
                 break
         
-        # Fallback: extrair do texto da página
+        # Se não encontrou variações, usar tamanho único
         if not tamanhos_disponiveis:
-            full_text = soup.get_text(" ", strip=True)
-            
-            # Debug: mostrar trecho do texto onde procurar tamanhos
-            tamanho_context = re.search(r"Tamanho[:\s]*[^.]*", full_text, re.I)
-            if tamanho_context:
-                print(f"🔍 Debug contexto tamanho: {tamanho_context.group(0)}")
-            
-            # Padrão específico para "PP P M G" (com PP duplicado no texto)
-            pp_p_m_g_match = re.search(r"Tamanho[:\s]*PP\s+PP\s+P\s+M\s+G", full_text, re.I)
-            if pp_p_m_g_match:
-                tamanhos_disponiveis = ["PP", "P", "M", "G"]
-                print(f"🔍 Debug: encontrado padrão PP P M G")
-            else:
-                # Fallback: padrão genérico
-                tamanho_match = re.search(r"(?:Tamanho[:\s]*)?((?:PP?|P|M|G|GG?|X?S|X?L|XX?L|\d{2,3})(?:\s+(?:PP?|P|M|G|GG?|X?S|X?L|XX?L|\d{2,3}))*)", full_text, re.I)
-                if tamanho_match:
-                    tamanhos_str = tamanho_match.group(1)
-                    tamanhos_disponiveis = [t.strip() for t in re.split(r'\s+', tamanhos_str) if t.strip()]
-                    print(f"🔍 Debug tamanhos encontrados: {tamanhos_disponiveis}")
+            tamanhos_disponiveis = ["ÚNICO"]
     
-    # Se não encontrou tamanhos, usar tamanho padrão
+
+    
+    # Para outros sites, usar tamanho padrão
     if not tamanhos_disponiveis:
         tamanhos_disponiveis = ["ÚNICO"]
 
@@ -438,57 +485,55 @@ def extrair_produto(url):
     if not NomeDepartamento or not NomeCategoria:
         nome_lower = nome.lower()
         
-        # Para Colcci, sempre usar Feminino como departamento padrão
-        if "colcci.com.br" in url:
-            NomeDepartamento = "Feminino"
+            # Para Koerich, detectar eletrodomésticos
+    if "koerich.com.br" in url:
+        # Detectar departamento baseado no tipo de produto
+        if any(palavra in nome_lower for palavra in ["frigobar", "freezer", "refrigerador", "geladeira"]):
+            NomeDepartamento = "Refrigeração"
+        elif any(palavra in nome_lower for palavra in ["ar condicionado", "ar-condicionado", "climatizador"]):
+            NomeDepartamento = "Ar Condicionado"
+        elif any(palavra in nome_lower for palavra in ["ventilador", "ventilação", "ventilacao"]):
+            NomeDepartamento = "Ventilação"
+        elif any(palavra in nome_lower for palavra in ["aquecedor", "aquecedores"]):
+            NomeDepartamento = "Aquecimento"
+        elif any(palavra in nome_lower for palavra in ["máquina de lavar", "maquina de lavar", "lavadora"]):
+            NomeDepartamento = "Lavagem"
+        elif any(palavra in nome_lower for palavra in ["fogão", "fogao", "cooktop", "forno"]):
+            NomeDepartamento = "Cozinha"
+        elif any(palavra in nome_lower for palavra in ["aspirador", "aspiradores"]):
+            NomeDepartamento = "Limpeza"
         else:
-            # Detectar departamento (Feminino/Masculino)
-            if any(palavra in nome_lower for palavra in ["feminino", "feminina", "mulher", "mulheres"]):
-                NomeDepartamento = "Feminino"
-            elif any(palavra in nome_lower for palavra in ["masculino", "masculina", "homem", "homens"]):
-                NomeDepartamento = "Masculino"
-            else:
-                # Tentar detectar pelo tipo de produto
-                if any(palavra in nome_lower for palavra in ["vestido", "blusa", "saia", "blazer", "cardigã", "macacão"]):
-                    NomeDepartamento = "Feminino"
-                elif any(palavra in nome_lower for palavra in ["camisa", "camiseta", "bermuda", "calça", "jaqueta"]):
-                    NomeDepartamento = "Masculino"
-                else:
-                    NomeDepartamento = "Feminino"  # Default para Colcci
+            NomeDepartamento = "Eletrodomésticos"  # Default para Koerich
         
         # Detectar categoria específica
-        if "vestido" in nome_lower:
-            NomeCategoria = "Vestidos"
-        elif "blusa" in nome_lower:
-            NomeCategoria = "Blusas"
-        elif "calça" in nome_lower or "calca" in nome_lower:
-            NomeCategoria = "Calças"
-        elif "saia" in nome_lower:
-            NomeCategoria = "Saias"
-        elif "blazer" in nome_lower:
-            NomeCategoria = "Blazers"
-        elif "camiseta" in nome_lower:
-            NomeCategoria = "Camisetas"
-        elif "camisa" in nome_lower:
-            NomeCategoria = "Camisas"
-        elif "bermuda" in nome_lower:
-            NomeCategoria = "Bermudas"
-        elif "jaqueta" in nome_lower:
-            NomeCategoria = "Jaquetas"
-        elif "regata" in nome_lower:
-            NomeCategoria = "Regatas"
-        elif "short" in nome_lower:
-            NomeCategoria = "Shorts"
-        elif "macacão" in nome_lower or "macacao" in nome_lower:
-            NomeCategoria = "Macacões"
-        elif "top" in nome_lower:
-            NomeCategoria = "Tops"
-        elif "cardigã" in nome_lower or "cardiga" in nome_lower:
-            NomeCategoria = "Cardigãs"
-        elif "casaco" in nome_lower:
-            NomeCategoria = "Casacos"
+        if "frigobar" in nome_lower:
+            NomeCategoria = "Frigobar"
+        elif "freezer" in nome_lower:
+            NomeCategoria = "Freezer"
+        elif "refrigerador" in nome_lower or "geladeira" in nome_lower:
+            NomeCategoria = "Refrigerador"
+        elif "ar condicionado" in nome_lower or "ar-condicionado" in nome_lower:
+            NomeCategoria = "Ar Condicionado"
+        elif "ventilador" in nome_lower:
+            NomeCategoria = "Ventilador"
+        elif "aquecedor" in nome_lower:
+            NomeCategoria = "Aquecedor"
+        elif "máquina de lavar" in nome_lower or "maquina de lavar" in nome_lower:
+            NomeCategoria = "Máquina de Lavar"
+        elif "fogão" in nome_lower or "fogao" in nome_lower:
+            NomeCategoria = "Fogão"
+        elif "microondas" in nome_lower:
+            NomeCategoria = "Microondas"
+        elif "liquidificador" in nome_lower:
+            NomeCategoria = "Liquidificador"
+        elif "aspirador" in nome_lower:
+            NomeCategoria = "Aspirador"
         else:
-            NomeCategoria = "Vestidos"  # Default para Colcci
+            NomeCategoria = "Eletrodomésticos"  # Default para Koerich
+    else:
+        # Para outros sites, usar lógica genérica
+        NomeDepartamento = "Eletrodomésticos"  # Default genérico
+        NomeCategoria = "Eletrodomésticos"  # Default genérico
 
     # SKU: reúne candidatos -> escolhe o 1º não vazio
     sku_candidates = []
@@ -508,7 +553,7 @@ def extrair_produto(url):
         sku_candidates.append(meta_sku["content"].strip())
     # último recurso: slug
     sku_candidates.append(url.rstrip("/").split("/")[-1])
-    # Fallback adicional (Colcci): extrair por rótulo "Ref." ou "Referência"
+    # Fallback adicional: extrair por rótulo "Ref." ou "Referência"
     try:
         full_txt = soup.get_text(" ", strip=True)
         mref = re.search(r"(?:Ref\.?|Refer[eê]ncia)[:\s]+([A-Z0-9\-\.\/]+)", full_txt, flags=re.I)
@@ -544,65 +589,135 @@ def extrair_produto(url):
     # Fallback: extrair marca do nome do produto
     if not Marca:
         nome_lower = nome.lower()
-        marcas_conhecidas = [
-            "colcci", "colcci jeans", "colcci sport", "colcci beach", 
-            "colcci festa", "colcci acessórios", "colcci acessorios"
-        ]
         
-        for marca in marcas_conhecidas:
-            if marca in nome_lower:
-                Marca = marca.title()
-                break
+        # Para Koerich, detectar marcas de eletrodomésticos
+        if "koerich.com.br" in url:
+            marcas_conhecidas = [
+                "midea", "electrolux", "brastemp", "consul", "panasonic", 
+                "samsung", "lg", "philco", "ge", "whirlpool", "bosch", 
+                "siemens", "fischer", "continental", "cce", "prosdócimo"
+            ]
+            
+            for marca in marcas_conhecidas:
+                if marca in nome_lower:
+                    Marca = marca.title()
+                    break
+            
+            # Se não encontrou marca específica, usar Midea como padrão (muito comum na Koerich)
+            if not Marca:
+                Marca = "Midea"
         
-        # Se não encontrou marca específica, usar Colcci como padrão
-        if not Marca:
-            Marca = "Colcci"
+        # Para outros sites, usar lógica genérica
+        else:
+            marcas_conhecidas = [
+                "midea", "electrolux", "brastemp", "consul", "panasonic", 
+                "samsung", "lg", "philco", "ge", "whirlpool"
+            ]
+            
+            for marca in marcas_conhecidas:
+                if marca in nome_lower:
+                    Marca = marca.title()
+                    break
+            
+            # Se não encontrou marca específica, usar Koerich como padrão
+            if not Marca:
+                Marca = "Koerich"
 
     # --- IDs VTEX via mapeamento local ---
-    # Para Colcci, detectar se é produto masculino ou feminino
-    if "colcci.com.br" in url:
-        nome_lower = nome.lower()
-        if any(palavra in nome_lower for palavra in ["masculina", "masculino", "homem", "homens"]):
-            NomeDepartamento = "Masculino"
-        else:
-            NomeDepartamento = "Feminino"
+    # Para Koerich, usar departamento já detectado
+    if "koerich.com.br" in url:
+        # Departamento e categoria já foram detectados acima
+        pass
+    # Para outros sites, usar lógica genérica
+    else:
+        # Departamento e categoria já foram detectados acima
+        pass
     
     _IDDepartamento = maps["departamento"].get(NomeDepartamento, "")
     _IDCategoria = maps["categoria"].get(NomeCategoria, "")
     _IDMarca = maps["marca"].get(Marca, "")
 
-    # Imagens: se vazio, captura de <img> e <source srcset> (típico em carrosséis)
-    if not imgs:
-        # <img>
+    # Imagens: captura de <img> e <source srcset> (típico em carrosséis)
+    # Para Koerich, procurar por imagens específicas do produto em alta qualidade
+    if "koerich.com.br" in url:
+        # Procurar por imagens em carrosséis e galerias
         for img in soup.select("img"):
-            src = img.get("src") or img.get("data-src") or parse_srcset(img.get("srcset"))
+            src = img.get("src") or img.get("data-src") or img.get("data-lazy-src") or parse_srcset(img.get("srcset"))
             if src and "data:image" not in src and "blank" not in src.lower():
-                imgs.append(src)
-        # <source srcset>
-        for source in soup.select("source"):
-            srcset = source.get("srcset")
-            url_first = parse_srcset(srcset)
-            if url_first and "data:image" not in url_first:
-                imgs.append(url_first)
-    else:
-        # Mesmo assim, vamos tentar buscar no HTML para ter mais opções
-        html_imgs = []
-        # <img>
-        for img in soup.select("img"):
-            src = img.get("src") or img.get("data-src") or parse_srcset(img.get("srcset"))
-            if src and "data:image" not in src and "blank" not in src.lower():
-                html_imgs.append(src)
-        # <source srcset>
-        for source in soup.select("source"):
-            srcset = source.get("srcset")
-            url_first = parse_srcset(srcset)
-            if url_first and "data:image" not in url_first:
-                html_imgs.append(url_first)
+                # Filtrar imagens que parecem ser do produto (contêm números ou extensões de imagem)
+                if any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']) and any(char.isdigit() for char in src):
+                    # Remover parâmetros de redimensionamento para obter imagem original
+                    clean_src = src.split('&')[0] if '&' in src else src
+                    imgs.append(clean_src)
         
-        # Adicionar imagens do HTML se não estiverem na lista
-        for img in html_imgs:
-            if img not in imgs:
-                imgs.append(img)
+        # <source srcset> para imagens responsivas - pegar a maior resolução
+        for source in soup.select("source"):
+            srcset = source.get("srcset")
+            if srcset:
+                # Parse srcset para pegar a maior resolução
+                srcset_parts = srcset.split(',')
+                best_url = ""
+                best_width = 0
+                
+                for part in srcset_parts:
+                    part = part.strip()
+                    if ' ' in part:
+                        url_part, width_part = part.rsplit(' ', 1)
+                        try:
+                            width = int(width_part.replace('w', ''))
+                            if width > best_width:
+                                best_width = width
+                                best_url = url_part.strip()
+                        except:
+                            pass
+                
+                if best_url and "data:image" not in best_url:
+                    if any(ext in best_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                        # Remover parâmetros de redimensionamento
+                        clean_url = best_url.split('&')[0] if '&' in best_url else best_url
+                        imgs.append(clean_url)
+        
+        # Se não encontrou imagens específicas, buscar todas as imagens
+        if not imgs:
+            for img in soup.select("img"):
+                src = img.get("src") or img.get("data-src") or img.get("data-lazy-src") or parse_srcset(img.get("srcset"))
+                if src and "data:image" not in src and "blank" not in src.lower():
+                    # Remover parâmetros de redimensionamento
+                    clean_src = src.split('&')[0] if '&' in src else src
+                    imgs.append(clean_src)
+    else:
+        # Para outros sites, usar lógica original
+        if not imgs:
+            # <img>
+            for img in soup.select("img"):
+                src = img.get("src") or img.get("data-src") or parse_srcset(img.get("srcset"))
+                if src and "data:image" not in src and "blank" not in src.lower():
+                    imgs.append(src)
+            # <source srcset>
+            for source in soup.select("source"):
+                srcset = source.get("srcset")
+                url_first = parse_srcset(srcset)
+                if url_first and "data:image" not in url_first:
+                    imgs.append(url_first)
+        else:
+            # Mesmo assim, vamos tentar buscar no HTML para ter mais opções
+            html_imgs = []
+            # <img>
+            for img in soup.select("img"):
+                src = img.get("src") or img.get("data-src") or parse_srcset(img.get("srcset"))
+                if src and "data:image" not in src and "blank" not in src.lower():
+                    html_imgs.append(src)
+            # <source srcset>
+            for source in soup.select("source"):
+                srcset = source.get("srcset")
+                url_first = parse_srcset(srcset)
+                if url_first and "data:image" not in url_first:
+                    html_imgs.append(url_first)
+            
+            # Adicionar imagens do HTML se não estiverem na lista
+            for img in html_imgs:
+                if img not in imgs:
+                    imgs.append(img)
 
     # Dedup mantendo ordem + normaliza para URL absoluta
     seen, ordered = set(), []
@@ -611,6 +726,35 @@ def extrair_produto(url):
         if u_abs not in seen:
             seen.add(u_abs)
             ordered.append(u_abs)
+    
+    # Para Koerich, tentar obter URLs de imagens em alta qualidade
+    if "koerich.com.br" in url and ordered:
+        high_quality_imgs = []
+        for img_url in ordered:
+            # Tentar obter versão em alta qualidade
+            if "ccstore/v1/images/" in img_url:
+                # Remover parâmetros de redimensionamento
+                base_url = img_url.split('?')[0]
+                if 'source=' in img_url:
+                    # Extrair o caminho original da imagem
+                    import urllib.parse
+                    parsed = urllib.parse.urlparse(img_url)
+                    params = urllib.parse.parse_qs(parsed.query)
+                    if 'source' in params:
+                        source_path = params['source'][0]
+                        # Construir URL de alta qualidade
+                        high_quality_url = f"https://www.koerich.com.br{source_path}"
+                        high_quality_imgs.append(high_quality_url)
+                    else:
+                        high_quality_imgs.append(img_url)
+                else:
+                    high_quality_imgs.append(img_url)
+            else:
+                high_quality_imgs.append(img_url)
+        
+        # Usar as URLs de alta qualidade se encontradas
+        if high_quality_imgs:
+            ordered = high_quality_imgs
     
     # Filtrar apenas imagens do produto (que contenham o SKU)
     imgs_produto = []
