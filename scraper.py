@@ -75,25 +75,31 @@ maps = {
         "Aspirador": "14",
         "Ferro de Passar": "15",
         # Adicione mais conforme necessário
-    },
-    "marca": {
-        "Midea": "1",
-        "Electrolux": "2",
-        "Brastemp": "3",
-        "Consul": "4",
-        "Panasonic": "5",
-        "Samsung": "6",
-        "LG": "7",
-        "Philco": "8",
-        "GE": "9",
-        "Whirlpool": "10",
-        # Adicione mais conforme necessário
     }
 }
+
+# Dicionário para mapeamento dinâmico de marcas
+marca_mapping = {}
+marca_counter = 1
 
 # === Utils ===
 def limpar(t):
     return re.sub(r"\s+", " ", (t or "").strip())
+
+def get_marca_id(marca_nome):
+    """Retorna o ID da marca no formato 2000XXX"""
+    global marca_mapping, marca_counter
+    
+    if not marca_nome:
+        return "2000001"  # Default
+    
+    marca_upper = marca_nome.upper().strip()
+    
+    if marca_upper not in marca_mapping:
+        marca_mapping[marca_upper] = f"2000{marca_counter:03d}"
+        marca_counter += 1
+    
+    return marca_mapping[marca_upper]
 
 def parse_preco(texto):
     # 1ª ocorrência de R$ xxx,xx
@@ -666,7 +672,7 @@ def extrair_produto(url):
     
     _IDDepartamento = maps["departamento"].get(NomeDepartamento, "")
     _IDCategoria = maps["categoria"].get(NomeCategoria, "")
-    _IDMarca = maps["marca"].get(Marca, "")
+    _IDMarca = get_marca_id(Marca)
 
     # Imagens: captura de <img> e <source srcset> (típico em carrosséis)
     # Para Koerich, procurar por imagens específicas do produto em alta qualidade
@@ -879,6 +885,25 @@ for _, row in df_links.iterrows():
     except Exception as e:
         print(f"❌ Erro ao processar {url}: {e}")
 
-pd.DataFrame(produtos).to_csv(output_csv, index=False, encoding="utf-8-sig")
+# Salvar CSV
+df_final = pd.DataFrame(produtos)
+df_final.to_csv(output_csv, index=False, encoding="utf-8-sig")
+
+# Mostrar estatísticas
 print(f"\n✅ Planilha final salva: {output_csv}")
 print(f"🖼️ Imagens em: {output_folder}")
+
+# Estatísticas de marcas
+if len(produtos) > 0:
+    marca_counts = df_final['_Marca'].value_counts()
+    
+    print(f"\n🏷️ Marcas encontradas:")
+    for marca, count in marca_counts.items():
+        marca_id = get_marca_id(marca)
+        print(f"   {marca} (ID: {marca_id}): {count} produtos")
+    
+    print(f"\n📊 Total de marcas únicas: {len(marca_mapping)}")
+    print("📋 Mapeamento completo de marcas:")
+    for marca, marca_id in sorted(marca_mapping.items()):
+        count = marca_counts.get(marca, 0)
+        print(f"   {marca} → {marca_id} ({count} produtos)")
