@@ -1,206 +1,195 @@
-# 🏪 Scraper Koerich
+# 🛠️ Scraper Leo Madeiras
 
-Um scraper inteligente para capturar produtos da [Koerich](https://www.koerich.com.br), especializado em eletrodomésticos com extração de imagens em alta qualidade.
+**Web scraper especializado para extrair dados de produtos da [Leo Madeiras](https://www.leomadeiras.com.br/)**
 
-## ✨ Características
+## 📋 Descrição
 
-- 🎯 **Foco em Eletrodomésticos**: Otimizado para produtos da Koerich
-- 📸 **Imagens em Alta Qualidade**: Captura imagens originais sem redimensionamento
-- 🤖 **Suporte a JavaScript**: Usa Playwright para conteúdo dinâmico
-- 📊 **Exportação VTEX**: Formato compatível com plataformas e-commerce
-- 🔍 **Detecção Inteligente**: Categorização automática de produtos
-- 🏷️ **Mapeamento VTEX**: IDs específicos para departamentos, categorias e marcas
+Este scraper foi desenvolvido especificamente para extrair informações de produtos da Leo Madeiras, uma das principais lojas de ferramentas e materiais de construção do Brasil. O sistema utiliza técnicas avançadas de web scraping para capturar dados completos dos produtos, incluindo preços, descrições, imagens e especificações técnicas.
+
+## ✨ Funcionalidades
+
+- 🔍 **Extração Inteligente de Preços**: Captura preços dinâmicos carregados via JavaScript
+- 📊 **Dados Completos**: Nome, descrição, categoria, departamento, marca e especificações
+- 🖼️ **Download de Imagens**: Baixa automaticamente as imagens dos produtos
+- 🎯 **Foco na Leo Madeiras**: Otimizado especificamente para o site da Leo Madeiras
+- 📈 **Formato VTEX**: Gera CSV compatível com sistemas VTEX
+- 🚀 **Renderização JavaScript**: Usa Playwright para páginas dinâmicas
+
+## 🎯 Produtos Suportados
+
+### Departamentos
+- **MDF** e **Madeiras**
+- **Ferramentas Elétricas** (Furadeiras, Parafusadeiras, Serras)
+- **Ferramentas Manuais**
+- **Máquinas Estacionárias**
+- **Ferragens** e **Acessórios**
+- **Químicos** e **Revestimentos**
+- **EPI** e **Construção**
+
+### Marcas Principais
+- **Kress** - Ferramentas elétricas profissionais
+- **Bosch** - Ferramentas de alta qualidade
+- **Makita** - Ferramentas profissionais
+- **Dewalt** - Ferramentas robustas
+- **Milwaukee** - Ferramentas industriais
 
 ## 🚀 Instalação
 
+### Pré-requisitos
+- Python 3.8+
+- pip (gerenciador de pacotes Python)
+
+### Passos de Instalação
+
+1. **Clone o repositório:**
 ```bash
-# Clone o repositório
-git clone https://github.com/thomas-ramirez/scraper-koerich.git
-cd scraper-koerich
-
-# Instale as dependências
-pip install -r requirements.txt
-
-# Instale o Playwright (opcional, para conteúdo dinâmico)
-playwright install chromium
+git clone https://github.com/thomas-ramirez/scraper-leomadeiras.git
+cd scraper-leomadeiras
 ```
 
-## 📋 Dependências
+2. **Instale as dependências:**
+```bash
+pip install -r requirements.txt
+```
 
-- `requests>=2.31.0` - Requisições HTTP
-- `beautifulsoup4>=4.12.0` - Parseamento HTML
-- `pandas>=2.0.0` - Manipulação de dados
-- `lxml>=4.9.0` - Parser XML/HTML
-- `playwright>=1.40.0` - Automação de navegador
-- `urllib3>=2.0.0` - Cliente HTTP
-- `PyGithub>=2.0.0` - API do GitHub
+3. **Instale o Playwright (para renderização JavaScript):**
+```bash
+python -m playwright install chromium
+```
 
-## 🎯 Como Usar
+## 📖 Como Usar
 
-### 1. Preparar URLs dos Produtos
+### 1. Configurar URLs dos Produtos
 
-Crie um arquivo CSV em `data/csv/produtos_link.csv` com as URLs dos produtos:
+Edite o arquivo `data/csv/produtos_link.csv` e adicione as URLs dos produtos da Leo Madeiras:
 
 ```csv
 url
-https://www.koerich.com.br/p/frigobar-midea-45-litros-mrc06b2-branco/4043300
-https://www.koerich.com.br/p/freezer-horizontal-midea-295-litros-rcfa32-branco/4155100
+https://www.leomadeiras.com.br/p/10525549/furadeira-parafusadeira-de-impacto-a-bateria-12v-kuc11-bivolt-kress
+https://www.leomadeiras.com.br/p/outro-produto
 ```
 
 ### 2. Executar o Scraper
 
 ```bash
-python3 scraper.py
+python scraper.py
 ```
 
 ### 3. Resultados
 
-Os resultados serão salvos em:
-- **CSV**: `data/exports/produtos_vtex.csv`
-- **Imagens**: `data/exports/imagens_produtos/`
+O scraper irá:
+- ✅ Processar cada URL da lista
+- ✅ Extrair dados completos dos produtos
+- ✅ Baixar imagens para `data/exports/imagens_produtos/`
+- ✅ Gerar CSV em `data/exports/produtos_leo_madeiras.csv`
 
-## 📊 Estrutura de Dados
+## 🔧 Como Funciona
 
-### Mapeamentos VTEX
+### Extração de Preços (Prioridade)
 
-#### Departamentos
-- `Eletrodomésticos` (ID: 1)
-- `Eletroportáteis` (ID: 2)
-- `Ar Condicionado` (ID: 3)
-- `Aquecimento` (ID: 4)
-- `Ventilação` (ID: 5)
-- `Refrigeração` (ID: 6)
-- `Lavagem` (ID: 7)
-- `Cozinha` (ID: 8)
-- `Limpeza` (ID: 9)
-- `Pequenos Eletrodomésticos` (ID: 10)
+1. **`data-price`**: Atributo HTML com preço direto
+2. **`data-sku-obj`**: JSON com dados do produto (incluindo preço)
+3. **Templates Handlebars**: Padrões de preço em templates
+4. **Elementos HTML**: Classes `.price`, `.product-price`
+5. **JSON-LD**: Dados estruturados da página
+6. **Regex**: Busca por padrões de preço no texto
 
-#### Categorias
-- `Frigobar` (ID: 1)
-- `Freezer` (ID: 2)
-- `Refrigerador` (ID: 3)
-- `Ar Condicionado` (ID: 4)
-- `Ventilador` (ID: 5)
-- `Aquecedor` (ID: 6)
-- `Máquina de Lavar` (ID: 7)
-- `Secadora` (ID: 8)
-- `Fogão` (ID: 9)
-- `Microondas` (ID: 10)
-- `Liquidificador` (ID: 11)
-- `Mixer` (ID: 12)
-- `Processador` (ID: 13)
-- `Aspirador` (ID: 14)
-- `Ferro de Passar` (ID: 15)
+### Exemplo de Funcionamento
 
-#### Marcas
-- `Midea` (ID: 1)
-- `Electrolux` (ID: 2)
-- `Brastemp` (ID: 3)
-- `Consul` (ID: 4)
-- `Panasonic` (ID: 5)
-- `Samsung` (ID: 6)
-- `LG` (ID: 7)
-- `Philco` (ID: 8)
-- `GE` (ID: 9)
-- `Whirlpool` (ID: 10)
+```python
+# O scraper encontra este atributo na página:
+<div data-price="749.90">R$ 749,90</div>
 
-## 🔧 Funcionalidades Avançadas
-
-### Detecção Automática de Produtos
-
-O scraper detecta automaticamente:
-- **Departamento**: Baseado no tipo de produto (frigobar → Refrigeração)
-- **Categoria**: Específica do eletrodoméstico
-- **Marca**: Detectada no nome do produto
-- **Preço**: Extraído da página
-- **Descrição**: Seções "Sobre o Produto" e "Especificações"
-
-### Captura de Imagens em Alta Qualidade
-
-- ✅ Remove parâmetros de redimensionamento
-- ✅ Parseia srcset para maior resolução
-- ✅ Extrai URLs originais da API da Koerich
-- ✅ Verifica qualidade antes do download
-- ✅ Suporte a múltiplos formatos (JPG, PNG, WebP)
-
-### Exemplo de Resultado
-
-```csv
-_IDSKU,_NomeSKU,_Preço,_IDDepartamento,_NomeDepartamento,_IDCategoria,_NomeCategoria,_IDMarca,_Marca
-4155100,Freezer Horizontal Midea 295 Litros RCFA32 - Branco,2299.00,6,Refrigeração,2,Freezer,1,MIDEA
+# E extrai o preço:
+✅ Preço encontrado via data-price: 749.90
+💰 Preço final extraído: R$ 749.90
 ```
+
+## 📊 Estrutura do CSV Gerado
+
+O arquivo `produtos_leo_madeiras.csv` contém:
+
+| Campo | Descrição | Exemplo |
+|-------|-----------|---------|
+| `_IDSKU` | Código único do produto | `10525549` |
+| `_NomeSKU` | Nome completo do produto | `Furadeira Parafusadeira...` |
+| `_Preço` | Preço do produto | `749.90` |
+| `_IDDepartamento` | ID do departamento VTEX | `3` |
+| `_NomeDepartamento` | Nome do departamento | `Ferramentas Elétricas` |
+| `_IDCategoria` | ID da categoria VTEX | `4` |
+| `_NomeCategoria` | Nome da categoria | `Parafusadeira` |
+| `_Marca` | Marca do produto | `Kress` |
+| `_ImagensSalvas` | Arquivos de imagem baixados | `10525549_1.jpg;10525549_2.jpg` |
+| `_ImagensURLs` | URLs das imagens originais | `https://images.cws.digital/...` |
+
+## 🎨 Personalização
+
+### Adicionar Novas Categorias
+
+Edite o arquivo `scraper.py` na seção de mapeamentos:
+
+```python
+maps = {
+    "departamento": {
+        "Nova Categoria": "20",
+        # ... outras categorias
+    },
+    "categoria": {
+        "Nova Subcategoria": "20",
+        # ... outras subcategorias
+    }
+}
+```
+
+### Adicionar Novas Marcas
+
+O sistema detecta automaticamente marcas baseado no nome do produto, mas você pode personalizar:
+
+```python
+marcas_conhecidas = [
+    "kress", "bosch", "makita", "dewalt", "milwaukee",
+    "sua-marca-aqui"  # Adicione novas marcas
+]
+```
+
+## 🐛 Solução de Problemas
+
+### Erro: "Playwright não está disponível"
+```bash
+pip install playwright
+python -m playwright install chromium
+```
+
+### Erro: "Nenhum preço encontrado"
+- Verifique se a URL é da Leo Madeiras
+- A página pode estar com JavaScript desabilitado
+- Tente executar novamente
+
+### Imagens não baixam
+- Verifique a conexão com a internet
+- As URLs podem ter expirado
+- Verifique permissões da pasta `data/exports/imagens_produtos/`
 
 ## 📁 Estrutura do Projeto
 
 ```
-scraper-koerich/
+scraper-leomadeiras/
 ├── scraper.py              # Script principal
-├── requirements.txt        # Dependências
-├── README.md              # Documentação
+├── requirements.txt         # Dependências Python
+├── README.md               # Esta documentação
 ├── data/
 │   ├── csv/
 │   │   └── produtos_link.csv    # URLs dos produtos
 │   └── exports/
-│       ├── produtos_vtex.csv    # Resultados
+│       ├── produtos_leo_madeiras.csv    # Resultado final
 │       └── imagens_produtos/    # Imagens baixadas
-├── scripts/
-│   ├── scrape_koerich_page.py   # Scraper específico
-│   └── scrape_koerich_playwright.py  # Versão com Playwright
-├── docs/
-│   ├── ESTRUTURA_TECNICA.md     # Documentação técnica
-│   └── GUIA_RAPIDO.md           # Guia rápido
-└── templates/
-    └── produtos_link_example.csv # Exemplo de CSV
+├── scripts/                # Scripts auxiliares
+└── templates/              # Templates de exemplo
 ```
-
-## 🛠️ Scripts Disponíveis
-
-### `scraper.py` (Principal)
-- Scraper completo com todas as funcionalidades
-- Suporte a múltiplos produtos
-- Exportação VTEX
-
-### `scripts/scrape_koerich_page.py`
-- Scraper específico para uma página
-- Salva HTML da página
-- Análise de conteúdo
-
-### `scripts/scrape_koerich_playwright.py`
-- Versão com Playwright para conteúdo dinâmico
-- Renderização JavaScript
-- Captura de conteúdo assíncrono
-
-## 🔍 Exemplo de Uso
-
-```python
-# Executar scraper completo
-python3 scraper.py
-
-# Executar scraper específico
-python3 scripts/scrape_koerich_page.py
-
-# Executar com Playwright
-python3 scripts/scrape_koerich_playwright.py
-```
-
-## 📈 Melhorias Implementadas
-
-### Qualidade de Imagens
-- **Antes**: 744B - 21KB (thumbnails)
-- **Depois**: 32KB - 54KB (alta qualidade)
-
-### URLs de Imagens
-- **Antes**: `https://...&width=95&height=95`
-- **Depois**: `https://.../products/4155100.01.jpg`
-
-### Detecção Inteligente
-- Categorização automática por tipo de produto
-- Detecção de marca no nome
-- Extração de especificações técnicas
 
 ## 🤝 Contribuição
 
-1. Fork o projeto
+1. Faça um fork do projeto
 2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
 3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
 4. Push para a branch (`git push origin feature/AmazingFeature`)
@@ -210,19 +199,23 @@ python3 scripts/scrape_koerich_playwright.py
 
 Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
 
-## 👨‍💻 Autor
-
-**Thomas Ramirez**
-- GitHub: [@thomas-ramirez](https://github.com/thomas-ramirez)
-- Projeto: [scraper-koerich](https://github.com/thomas-ramirez/scraper-koerich)
-
 ## 🙏 Agradecimentos
 
-- [Koerich](https://www.koerich.com.br) - Fornecedor dos produtos
-- [Playwright](https://playwright.dev) - Automação de navegador
-- [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/) - Parseamento HTML
-- [Pandas](https://pandas.pydata.org) - Manipulação de dados
+- **Leo Madeiras** - Pela disponibilização dos produtos
+- **Playwright** - Pela ferramenta de automação web
+- **BeautifulSoup** - Pelo parser HTML robusto
+- **Pandas** - Pela manipulação de dados
+
+## 📞 Suporte
+
+Se você encontrar algum problema ou tiver dúvidas:
+
+1. **Issues**: Abra uma issue no GitHub
+2. **Documentação**: Verifique esta documentação
+3. **Exemplos**: Analise os arquivos de exemplo
 
 ---
 
-⭐ **Se este projeto te ajudou, considere dar uma estrela!**
+**Desenvolvido com ❤️ para facilitar a extração de dados da Leo Madeiras**
+
+*Última atualização: Setembro 2025*
