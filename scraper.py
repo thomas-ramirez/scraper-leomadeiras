@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from datetime import datetime
 from pathlib import Path
+from tqdm import tqdm
 
 try:
     from playwright.sync_api import sync_playwright
@@ -253,10 +254,24 @@ def extrair_produto(url):
     
     # Baixar imagens
     saved = []
-    for i, img_url in enumerate(imgs[:5], 1):
-        fname = f"{sku}_{i}.jpg"
-        if baixar_imagem(img_url, fname):
-            saved.append(fname)
+    if imgs:
+        print(f"📸 Baixando {len(imgs[:5])} imagens...")
+        with tqdm(total=len(imgs[:5]), desc="🖼️ Download imagens", 
+                  bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]') as img_pbar:
+            
+            for i, img_url in enumerate(imgs[:5], 1):
+                fname = f"{sku}_{i}.jpg"
+                img_pbar.set_description(f"📥 Baixando {fname}")
+                
+                if baixar_imagem(img_url, fname):
+                    saved.append(fname)
+                    img_pbar.set_postfix({'Status': '✅ Sucesso'})
+                else:
+                    img_pbar.set_postfix({'Status': '❌ Falha'})
+                
+                img_pbar.update(1)
+    else:
+        print("⚠️ Nenhuma imagem encontrada para download")
     
     # === Gerar Produto ===
     produto = {
@@ -318,18 +333,47 @@ if __name__ == "__main__":
     
     # Processar produtos
     produtos = []
+    
+    # Filtrar apenas URLs válidas da Leo Madeiras
+    urls_validas = []
     for _, row in df_links.iterrows():
         url = str(row["url"]).strip()
-        if not url or "leomadeiras.com.br" not in url:
-            continue
+        if url and "leomadeiras.com.br" in url:
+            urls_validas.append(url)
+    
+    if not urls_validas:
+        print("❌ Nenhuma URL válida da Leo Madeiras encontrada")
+        exit(1)
+    
+    print(f"🚀 Iniciando processamento de {len(urls_validas)} produtos...")
+    
+    # Barra de progresso principal
+    with tqdm(total=len(urls_validas), desc="🔄 Scraping produtos", 
+              bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]') as pbar:
         
-        try:
-            resultado = extrair_produto(url)
-            if resultado:
-                produtos.append(resultado)
-            time.sleep(1)
-        except Exception as e:
-            print(f"❌ Erro ao processar {url}: {e}")
+        for url in urls_validas:
+            try:
+                # Atualizar descrição da barra
+                pbar.set_description(f"🔍 Processando: {url.split('/')[-1][:30]}...")
+                
+                resultado = extrair_produto(url)
+                if resultado:
+                    produtos.append(resultado)
+                    pbar.set_postfix({
+                        'SKU': resultado['_IDSKU'],
+                        'Preço': f"R$ {resultado['_Preço']}",
+                        'Marca': resultado['_Marca']
+                    })
+                else:
+                    pbar.set_postfix({'Erro': 'Falha na extração'})
+                
+                time.sleep(1)  # Cortesia
+                pbar.update(1)
+                
+            except Exception as e:
+                pbar.set_postfix({'Erro': str(e)[:20]})
+                pbar.update(1)
+                continue
     
     # Salvar resultados
     if produtos:
