@@ -72,7 +72,7 @@ def criar_csv_imagens():
     # Criar DataFrame e salvar CSV
     df_imagens = pd.DataFrame(dados_csv)
     csv_path = Path.cwd() / 'data' / 'exports' / 'imagens_leo_madeiras.csv'
-    df_imagens.to_csv(csv_path, index=False, sep='\t')
+    df_imagens.to_csv(csv_path, index=False, sep=',')
     
     print(f"✅ CSV criado com sucesso: {csv_path}")
     print(f"📊 Total de registros: {len(dados_csv)}")
