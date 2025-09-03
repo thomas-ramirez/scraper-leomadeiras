@@ -247,10 +247,94 @@ def extrair_produto(url):
     
     # === Extrair Imagens ===
     imgs = []
+    
+    # Filtros para excluir imagens genéricas
+    filtros_exclusao = [
+        "logo", "brand", "marca", "garantia", "warranty", "badge", "icon",
+        "banner", "header", "footer", "nav", "menu", "button", "social",
+        "facebook", "instagram", "whatsapp", "youtube", "linkedin",
+        "star", "rating", "review", "comment", "user", "profile",
+        "shipping", "delivery", "payment", "credit", "debit", "pix",
+        "security", "ssl", "certificate", "quality", "iso", "certification"
+    ]
+    
+    # Filtros para incluir apenas imagens do produto
+    filtros_inclusao = [
+        "produto", "product", "item", "sku", "modelo", "model",
+        "foto", "photo", "image", "imagem", "gallery", "galeria"
+    ]
+    
     for img in soup.select("img"):
-        src = img.get("src") or img.get("data-src")
-        if src and "data:image" not in src and any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png']):
+        src = img.get("src") or img.get("data-src") or img.get("data-lazy-src")
+        if not src or "data:image" in src:
+            continue
+            
+        # Verificar extensão de imagem
+        if not any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+            continue
+        
+        # Verificar se é imagem genérica (excluir)
+        src_lower = src.lower()
+        if any(filtro in src_lower for filtro in filtros_exclusao):
+            continue
+        
+        # Verificar se contém SKU ou nome do produto (incluir)
+        contem_sku = sku in src_lower
+        contem_produto = any(filtro in src_lower for filtro in filtros_inclusao)
+        
+        # Verificar se a URL parece ser de produto (padrões comuns)
+        padrao_produto = any([
+            "/produtos/" in src_lower,
+            "/products/" in src_lower,
+            "/images/" in src_lower,
+            "/uploads/" in src_lower,
+            "cws.digital" in src_lower,  # CDN da Leo Madeiras
+            "leomadeiras.com.br" in src_lower
+        ])
+        
+        # Só incluir se for claramente uma imagem do produto
+        if contem_sku or (contem_produto and padrao_produto):
+            # Verificar se não é muito pequena (excluir thumbnails)
+            img_width = img.get("width") or img.get("data-width")
+            img_height = img.get("height") or img.get("data-height")
+            
+            if img_width and img_height:
+                try:
+                    width = int(img_width)
+                    height = int(img_height)
+                    if width < 200 or height < 200:  # Muito pequena, provavelmente thumbnail
+                        continue
+                except:
+                    pass
+            
             imgs.append(urljoin(url, src))
+    
+    # Se não encontrou imagens específicas, tentar buscar por padrões mais específicos
+    if not imgs:
+        print("🔍 Buscando imagens com padrões mais específicos...")
+        for img in soup.select("img"):
+            src = img.get("src") or img.get("data-src")
+            if not src or "data:image" in src:
+                continue
+                
+            src_lower = src.lower()
+            
+            # Buscar por imagens que contenham o SKU ou nome do produto
+            if (sku in src_lower or 
+                any(palavra in src_lower for palavra in nome.lower().split()[:3])):
+                
+                if any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                    imgs.append(urljoin(url, src))
+    
+    # Remover duplicatas mantendo ordem
+    imgs_unicas = []
+    for img in imgs:
+        if img not in imgs_unicas:
+            imgs_unicas.append(img)
+    
+    imgs = imgs_unicas[:5]  # Máximo 5 imagens
+    
+    print(f"📸 Encontradas {len(imgs)} imagens do produto (SKU: {sku})")
     
     # Baixar imagens
     saved = []
