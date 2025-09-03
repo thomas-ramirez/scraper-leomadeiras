@@ -21,13 +21,30 @@ output_folder = os.path.join(current_dir, "data", "exports", "imagens_produtos")
 # Criar pastas necessárias
 os.makedirs(output_folder, exist_ok=True)
 
-# === Sessão HTTP ===
+# === Sessão HTTP Otimizada ===
 session = requests.Session()
 session.headers.update({
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Referer": "https://www.leomadeiras.com.br/"
 })
+
+# Configurações de performance para conexões HTTP
+from requests.adapters import HTTPAdapter
+session.mount('http://', HTTPAdapter(
+    pool_connections=10,
+    pool_maxsize=20,
+    max_retries=1
+))
+session.mount('https://', HTTPAdapter(
+    pool_connections=10,
+    pool_maxsize=20,
+    max_retries=1
+))
 
 # === Mapeamentos VTEX ===
 maps = {
@@ -99,36 +116,84 @@ def parse_preco(texto):
                 continue
     return ""
 
+# Variáveis globais para reutilizar browser
+_playwright_instance = None
+_browser = None
+_context = None
+
+def get_playwright_instance():
+    """Retorna instância reutilizável do Playwright"""
+    global _playwright_instance, _browser, _context
+    
+    if _playwright_instance is None:
+        _playwright_instance = sync_playwright().start()
+        _browser = _playwright_instance.chromium.launch(
+            headless=True,
+            args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+        )
+        _context = _browser.new_context(
+            viewport={'width': 1280, 'height': 720},
+            user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        )
+    
+    return _playwright_instance, _browser, _context
+
+def cleanup_playwright():
+    """Limpa recursos do Playwright"""
+    global _playwright_instance, _browser, _context
+    
+    if _context:
+        _context.close()
+    if _browser:
+        _browser.close()
+    if _playwright_instance:
+        _playwright_instance.stop()
+    
+    _playwright_instance = None
+    _browser = None
+    _context = None
+
 def renderizar_html(url):
-    """Renderiza página via Playwright"""
+    """Renderiza página via Playwright com otimizações"""
     if not sync_playwright:
         print("⚠️ Playwright não disponível, usando HTML estático")
-        r = session.get(url, timeout=20)
+        r = session.get(url, timeout=10)
         return r.text
     
     try:
-        p = sync_playwright().start()
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
+        _, _, context = get_playwright_instance()
         page = context.new_page()
+        
+        # Otimizações de performance
+        page.set_default_timeout(15000)  # Aumentado para 15s para páginas complexas
+        page.set_default_navigation_timeout(15000)
+        
+        # NÃO desabilitar JavaScript - precisamos dele para carregar as imagens
+        page.route("**/*.{png,jpg,jpeg,gif,svg,woff,woff2,ttf,eot}", lambda route: route.abort())
+        # page.route("**/*.{css,js}", lambda route: route.abort())  # Comentado para permitir JS
+        
         page.goto(url, wait_until="domcontentloaded")
-        page.wait_for_load_state("networkidle", timeout=15000)
+        page.wait_for_load_state("domcontentloaded", timeout=10000)  # Aumentado para 10s
+        
+        # Aguardar um pouco mais para JavaScript carregar as imagens
+        page.wait_for_timeout(2000)
+        
         html = page.content()
-        browser.close()
-        p.stop()
+        page.close()
         return html
+        
     except Exception as e:
         print(f"⚠️ Erro com Playwright: {e}")
-        r = session.get(url, timeout=20)
+        r = session.get(url, timeout=10)
         return r.text
 
 def baixar_imagem(url_img, fname):
-    """Baixa imagem do produto"""
+    """Baixa imagem do produto com otimizações"""
     try:
-        with session.get(url_img, stream=True, timeout=30) as resp:
+        with session.get(url_img, stream=True, timeout=15) as resp:  # Reduzido de 30s para 15s
             resp.raise_for_status()
             with open(os.path.join(output_folder, fname), "wb") as f:
-                for chunk in resp.iter_content(8192):
+                for chunk in resp.iter_content(16384):  # Aumentado de 8KB para 16KB
                     if chunk:
                         f.write(chunk)
         return True
@@ -167,6 +232,49 @@ def extrair_produto(url):
         nome = "Sem Nome"
     
     print(f"✅ Nome: {nome}")
+    
+    # === Extrair Descrição ===
+    descricao = ""
+    
+    # 1. Tentar extrair da seção de descrição do produto
+    descricao_selectors = [
+        ".product-description",
+        ".product-details",
+        ".description",
+        ".produto-descricao",
+        ".descricao-produto",
+        "[data-description]",
+        ".product-info .description",
+        ".product-content .description"
+    ]
+    
+    for selector in descricao_selectors:
+        desc_tag = soup.select_one(selector)
+        if desc_tag:
+            desc_text = desc_tag.get_text(" ", strip=True)
+            if desc_text and len(desc_text) > 50:  # Descrição deve ter pelo menos 50 caracteres
+                descricao = limpar(desc_text)
+                print(f"✅ Descrição encontrada via selector: {selector}")
+                break
+    
+    # 2. Tentar extrair de elementos com texto descritivo
+    if not descricao:
+        for tag in soup.find_all(["p", "div", "span"]):
+            if tag.get_text(strip=True):
+                text = tag.get_text(strip=True)
+                # Verificar se parece uma descrição de produto
+                if (len(text) > 100 and 
+                    any(keyword in text.lower() for keyword in ["aplicações", "benefícios", "características", "especificações", "detalhes", "informações"])):
+                    descricao = limpar(text)
+                    print(f"✅ Descrição encontrada via texto descritivo")
+                    break
+    
+    # 3. Fallback: usar nome do produto
+    if not descricao:
+        descricao = nome
+        print(f"⚠️ Descrição não encontrada, usando nome do produto")
+    
+    print(f"📝 Descrição extraída: {descricao[:100]}...")
     
     # === Extrair Preço ===
     preco = ""
@@ -248,70 +356,46 @@ def extrair_produto(url):
     # === Extrair Imagens ===
     imgs = []
     
-    # Filtros para excluir imagens genéricas
-    filtros_exclusao = [
-        "logo", "brand", "marca", "garantia", "warranty", "badge", "icon",
-        "banner", "header", "footer", "nav", "menu", "button", "social",
-        "facebook", "instagram", "whatsapp", "youtube", "linkedin",
-        "star", "rating", "review", "comment", "user", "profile",
-        "shipping", "delivery", "payment", "credit", "debit", "pix",
-        "security", "ssl", "certificate", "quality", "iso", "certification"
-    ]
+    # Buscar especificamente por imagens de produtos nos elementos com zoom
+    # Prioridade 1: Imagens dentro de divs com data-zoom-image (mais confiável)
+    for zoom_div in soup.select("div[data-zoom-image]"):
+        zoom_img_url = zoom_div.get("data-zoom-image")
+        if zoom_img_url and "cws.digital" in zoom_img_url:
+            # Verificar se é uma imagem válida
+            if any(ext in zoom_img_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                imgs.append(zoom_img_url)
+                print(f"✅ Imagem encontrada via data-zoom-image: {zoom_img_url}")
     
-    # Filtros para incluir apenas imagens do produto
-    filtros_inclusao = [
-        "produto", "product", "item", "sku", "modelo", "model",
-        "foto", "photo", "image", "imagem", "gallery", "galeria"
-    ]
+    # Prioridade 2: Imagens dentro de divs com classe "zoom" ou similares
+    for zoom_div in soup.select("div.zoom, div[class*='zoom'], div[class*='image']"):
+        for img in zoom_div.select("img"):
+            src = img.get("src") or img.get("data-src")
+            if src and "cws.digital" in src:
+                if any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                    if src not in imgs:  # Evitar duplicatas
+                        imgs.append(src)
+                        print(f"✅ Imagem encontrada via div zoom: {src}")
     
-    for img in soup.select("img"):
-        src = img.get("src") or img.get("data-src") or img.get("data-lazy-src")
-        if not src or "data:image" in src:
-            continue
-            
-        # Verificar extensão de imagem
-        if not any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
-            continue
-        
-        # Verificar se é imagem genérica (excluir)
-        src_lower = src.lower()
-        if any(filtro in src_lower for filtro in filtros_exclusao):
-            continue
-        
-        # Verificar se contém SKU ou nome do produto (incluir)
-        contem_sku = sku in src_lower
-        contem_produto = any(filtro in src_lower for filtro in filtros_inclusao)
-        
-        # Verificar se a URL parece ser de produto (padrões comuns)
-        padrao_produto = any([
-            "/produtos/" in src_lower,
-            "/products/" in src_lower,
-            "/images/" in src_lower,
-            "/uploads/" in src_lower,
-            "cws.digital" in src_lower,  # CDN da Leo Madeiras
-            "leomadeiras.com.br" in src_lower
-        ])
-        
-        # Só incluir se for claramente uma imagem do produto
-        if contem_sku or (contem_produto and padrao_produto):
-            # Verificar se não é muito pequena (excluir thumbnails)
-            img_width = img.get("width") or img.get("data-width")
-            img_height = img.get("height") or img.get("data-height")
-            
-            if img_width and img_height:
-                try:
-                    width = int(img_width)
-                    height = int(img_height)
-                    if width < 200 or height < 200:  # Muito pequena, provavelmente thumbnail
-                        continue
-                except:
-                    pass
-            
-            imgs.append(urljoin(url, src))
+    # Prioridade 3: Imagens com classe "zoomImg" (imagens de zoom dos produtos)
+    for img in soup.select("img.zoomImg"):
+        src = img.get("src") or img.get("data-src")
+        if src and "cws.digital" in src:
+            if any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                if src not in imgs:  # Evitar duplicatas
+                    imgs.append(src)
+                    print(f"✅ Imagem encontrada via classe zoomImg: {src}")
     
-    # Se não encontrou imagens específicas, tentar buscar por padrões mais específicos
+    # Prioridade 4: Imagens com classe "original" (geralmente são as principais)
+    for img in soup.select("img.original"):
+        src = img.get("src") or img.get("data-src")
+        if src and "cws.digital" in src:
+            if any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                if src not in imgs:  # Evitar duplicatas
+                    imgs.append(src)
+                    print(f"✅ Imagem encontrada via classe original: {src}")
+    
+    # Prioridade 4: Buscar por imagens específicas de produtos (mais rigoroso)
     if not imgs:
-        print("🔍 Buscando imagens com padrões mais específicos...")
         for img in soup.select("img"):
             src = img.get("src") or img.get("data-src")
             if not src or "data:image" in src:
@@ -319,34 +403,86 @@ def extrair_produto(url):
                 
             src_lower = src.lower()
             
-            # Buscar por imagens que contenham o SKU ou nome do produto
-            if (sku in src_lower or 
-                any(palavra in src_lower for palavra in nome.lower().split()[:3])):
+            # Verificar extensão de imagem
+            if not any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                continue
+            
+            # Verificar se é uma imagem de produto (deve conter "/produtos/" e ser do domínio correto)
+            if ("/produtos/" in src_lower and 
+                "cws.digital" in src_lower and
+                not any(exclude in src_lower for exclude in ["/multimidia/", "/fornecedores/", "instagram", "facebook", "linkedln"])):
                 
-                if any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
-                    imgs.append(urljoin(url, src))
+                if src not in imgs:  # Evitar duplicatas
+                    imgs.append(src)
+                    print(f"✅ Imagem encontrada via padrão produto: {src}")
+                    if len(imgs) >= 5:  # Limite de 5 imagens
+                        break
     
-    # Remover duplicatas mantendo ordem
-    imgs_unicas = []
-    for img in imgs:
-        if img not in imgs_unicas:
-            imgs_unicas.append(img)
+    # Prioridade 5: Buscar por imagens que contenham o SKU específico (último recurso)
+    if not imgs:
+        for img in soup.select("img"):
+            src = img.get("src") or img.get("data-src")
+            if not src or "data:image" in src:
+                continue
+                
+            src_lower = src.lower()
+            
+            # Verificar extensão de imagem
+            if not any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                continue
+            
+            # Verificar se contém SKU específico
+            if sku in src_lower:
+                if src not in imgs:  # Evitar duplicatas
+                    imgs.append(src)
+                    print(f"✅ Imagem encontrada via SKU: {src}")
+                    if len(imgs) >= 5:  # Limite de 5 imagens
+                        break
     
-    imgs = imgs_unicas[:5]  # Máximo 5 imagens
+    # Prioridade 6: Buscar por imagens que seguem o padrão dos produtos que funcionam
+    if not imgs:
+        print(f"🔍 Buscando por imagens com padrão de produto...")
+        
+        # Buscar por qualquer imagem que contenha "/produtos/" e seja do domínio correto
+        for img in soup.select("img"):
+            src = img.get("src") or img.get("data-src")
+            if not src or "data:image" in src:
+                continue
+                
+            src_lower = src.lower()
+            
+            # Verificar extensão de imagem
+            if not any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                continue
+            
+            # Verificar se é uma imagem de produto (deve conter "/produtos/" e ser do domínio correto)
+            if ("/produtos/" in src_lower and 
+                "cws.digital" in src_lower and
+                not any(exclude in src_lower for exclude in ["/multimidia/", "/fornecedores/", "instagram", "facebook", "linkedln", "youtube", "pinterest", "tiktok"])):
+                
+                if src not in imgs:  # Evitar duplicatas
+                    imgs.append(src)
+                    print(f"✅ Imagem encontrada via padrão produto: {src}")
+                    if len(imgs) >= 5:  # Limite de 5 imagens
+                        break
+    
+    # Remover duplicatas e limitar a 5 imagens
+    imgs = list(dict.fromkeys(imgs))[:5]  # dict.fromkeys preserva ordem e remove duplicatas
     
     print(f"📸 Encontradas {len(imgs)} imagens do produto (SKU: {sku})")
     
     # Baixar imagens
     saved = []
     if imgs:
-        print(f"📸 Baixando {len(imgs[:5])} imagens...")
-        with tqdm(total=len(imgs[:5]), desc="🖼️ Download imagens", 
+        print(f"📸 Baixando {len(imgs)} imagens...")
+        with tqdm(total=len(imgs), desc="🖼️ Download imagens", 
                   bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]') as img_pbar:
             
-            for i, img_url in enumerate(imgs[:5], 1):
+            for i, img_url in enumerate(imgs, 1):
                 fname = f"{sku}_{i}.jpg"
                 img_pbar.set_description(f"📥 Baixando {fname}")
                 
+                # As URLs já são completas, não precisamos de urljoin
                 if baixar_imagem(img_url, fname):
                     saved.append(fname)
                     img_pbar.set_postfix({'Status': '✅ Sucesso'})
@@ -376,12 +512,12 @@ def extrair_produto(url):
         "_CodigoFabricante": "",
         "_IDProduto": sku,
         "_NomeProduto": nome,
-        "_BreveDescricaoProduto": nome[:200],
+        "_BreveDescricaoProduto": descricao[:200] if descricao else nome[:200],
         "_ProdutoAtivo": "SIM",
         "_CodigoReferenciaProduto": sku,
         "_MostrarNoSite": "SIM",
         "_LinkTexto": url.rstrip("/").split("/")[-1],
-        "_DescricaoProduto": nome,
+        "_DescricaoProduto": descricao if descricao else nome,
         "_DataLancamentoProduto": datetime.today().strftime("%d/%m/%Y"),
         "_PalavrasChave": "",
         "_TituloSite": nome,
@@ -450,8 +586,8 @@ if __name__ == "__main__":
                     })
                 else:
                     pbar.set_postfix({'Erro': 'Falha na extração'})
+
                 
-                time.sleep(1)  # Cortesia
                 pbar.update(1)
                 
             except Exception as e:
@@ -475,3 +611,6 @@ if __name__ == "__main__":
             print(f"   {marca}: {count} produtos")
     else:
         print("❌ Nenhum produto processado")
+    
+    # Limpar recursos do Playwright
+    cleanup_playwright()
