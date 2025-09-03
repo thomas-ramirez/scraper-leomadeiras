@@ -125,7 +125,7 @@ def get_playwright_instance():
     """Retorna instância reutilizável do Playwright"""
     global _playwright_instance, _browser, _context
     
-    if _playwright_instance is None:
+    if _playwright_instance is None and sync_playwright is not None:
         _playwright_instance = sync_playwright().start()
         _browser = _playwright_instance.chromium.launch(
             headless=True,
@@ -162,6 +162,9 @@ def renderizar_html(url):
     
     try:
         _, _, context = get_playwright_instance()
+        if context is None:
+            raise Exception("Context não disponível")
+            
         page = context.new_page()
         
         # Otimizações de performance
@@ -297,17 +300,18 @@ def extrair_produto(url):
             if data_sku_obj:
                 try:
                     import html
-                    decoded = html.unescape(data_sku_obj)
-                    sku_data = json.loads(decoded)
-                    
-                    if "price" in sku_data:
-                        preco = f"{float(str(sku_data['price']).replace(',', '.')):.2f}"
-                        print(f"✅ Preço via data-sku-obj: {preco}")
-                        break
-                    elif "best" in sku_data and "price" in sku_data["best"]:
-                        preco = f"{float(str(sku_data['best']['price']).replace(',', '.')):.2f}"
-                        print(f"✅ Preço via data-sku-obj.best: {preco}")
-                        break
+                    if isinstance(data_sku_obj, str):
+                        decoded = html.unescape(data_sku_obj)
+                        sku_data = json.loads(decoded)
+                        
+                        if "price" in sku_data:
+                            preco = f"{float(str(sku_data['price']).replace(',', '.')):.2f}"
+                            print(f"✅ Preço via data-sku-obj: {preco}")
+                            break
+                        elif "best" in sku_data and "price" in sku_data["best"]:
+                            preco = f"{float(str(sku_data['best']['price']).replace(',', '.')):.2f}"
+                            print(f"✅ Preço via data-sku-obj.best: {preco}")
+                            break
                 except:
                     continue
     
@@ -360,7 +364,7 @@ def extrair_produto(url):
     # Prioridade 1: Imagens dentro de divs com data-zoom-image (mais confiável)
     for zoom_div in soup.select("div[data-zoom-image]"):
         zoom_img_url = zoom_div.get("data-zoom-image")
-        if zoom_img_url and "cws.digital" in zoom_img_url:
+        if zoom_img_url and isinstance(zoom_img_url, str) and "cws.digital" in zoom_img_url:
             # Verificar se é uma imagem válida
             if any(ext in zoom_img_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
                 imgs.append(zoom_img_url)
@@ -370,7 +374,7 @@ def extrair_produto(url):
     for zoom_div in soup.select("div.zoom, div[class*='zoom'], div[class*='image']"):
         for img in zoom_div.select("img"):
             src = img.get("src") or img.get("data-src")
-            if src and "cws.digital" in src:
+            if src and isinstance(src, str) and "cws.digital" in src:
                 if any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
                     if src not in imgs:  # Evitar duplicatas
                         imgs.append(src)
@@ -379,7 +383,7 @@ def extrair_produto(url):
     # Prioridade 3: Imagens com classe "zoomImg" (imagens de zoom dos produtos)
     for img in soup.select("img.zoomImg"):
         src = img.get("src") or img.get("data-src")
-        if src and "cws.digital" in src:
+        if src and isinstance(src, str) and "cws.digital" in src:
             if any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
                 if src not in imgs:  # Evitar duplicatas
                     imgs.append(src)
@@ -388,7 +392,7 @@ def extrair_produto(url):
     # Prioridade 4: Imagens com classe "original" (geralmente são as principais)
     for img in soup.select("img.original"):
         src = img.get("src") or img.get("data-src")
-        if src and "cws.digital" in src:
+        if src and isinstance(src, str) and "cws.digital" in src:
             if any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
                 if src not in imgs:  # Evitar duplicatas
                     imgs.append(src)
@@ -401,22 +405,23 @@ def extrair_produto(url):
             if not src or "data:image" in src:
                 continue
                 
-            src_lower = src.lower()
-            
-            # Verificar extensão de imagem
-            if not any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
-                continue
-            
-            # Verificar se é uma imagem de produto (deve conter "/produtos/" e ser do domínio correto)
-            if ("/produtos/" in src_lower and 
-                "cws.digital" in src_lower and
-                not any(exclude in src_lower for exclude in ["/multimidia/", "/fornecedores/", "instagram", "facebook", "linkedln"])):
+            if isinstance(src, str):
+                src_lower = src.lower()
                 
-                if src not in imgs:  # Evitar duplicatas
-                    imgs.append(src)
-                    print(f"✅ Imagem encontrada via padrão produto: {src}")
-                    if len(imgs) >= 5:  # Limite de 5 imagens
-                        break
+                # Verificar extensão de imagem
+                if not any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                    continue
+                
+                # Verificar se é uma imagem de produto (deve conter "/produtos/" e ser do domínio correto)
+                if ("/produtos/" in src_lower and 
+                    "cws.digital" in src_lower and
+                    not any(exclude in src_lower for exclude in ["/multimidia/", "/fornecedores/", "instagram", "facebook", "linkedln"])):
+                    
+                    if src not in imgs:  # Evitar duplicatas
+                        imgs.append(src)
+                        print(f"✅ Imagem encontrada via padrão produto: {src}")
+                        if len(imgs) >= 5:  # Limite de 5 imagens
+                            break
     
     # Prioridade 5: Buscar por imagens que contenham o SKU específico (último recurso)
     if not imgs:
@@ -425,19 +430,20 @@ def extrair_produto(url):
             if not src or "data:image" in src:
                 continue
                 
-            src_lower = src.lower()
-            
-            # Verificar extensão de imagem
-            if not any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
-                continue
-            
-            # Verificar se contém SKU específico
-            if sku in src_lower:
-                if src not in imgs:  # Evitar duplicatas
-                    imgs.append(src)
-                    print(f"✅ Imagem encontrada via SKU: {src}")
-                    if len(imgs) >= 5:  # Limite de 5 imagens
-                        break
+            if isinstance(src, str):
+                src_lower = src.lower()
+                
+                # Verificar extensão de imagem
+                if not any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                    continue
+                
+                # Verificar se contém SKU específico
+                if sku in src_lower:
+                    if src not in imgs:  # Evitar duplicatas
+                        imgs.append(src)
+                        print(f"✅ Imagem encontrada via SKU: {src}")
+                        if len(imgs) >= 5:  # Limite de 5 imagens
+                            break
     
     # Prioridade 6: Buscar por imagens que seguem o padrão dos produtos que funcionam
     if not imgs:
@@ -449,22 +455,23 @@ def extrair_produto(url):
             if not src or "data:image" in src:
                 continue
                 
-            src_lower = src.lower()
-            
-            # Verificar extensão de imagem
-            if not any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
-                continue
-            
-            # Verificar se é uma imagem de produto (deve conter "/produtos/" e ser do domínio correto)
-            if ("/produtos/" in src_lower and 
-                "cws.digital" in src_lower and
-                not any(exclude in src_lower for exclude in ["/multimidia/", "/fornecedores/", "instagram", "facebook", "linkedln", "youtube", "pinterest", "tiktok"])):
+            if isinstance(src, str):
+                src_lower = src.lower()
                 
-                if src not in imgs:  # Evitar duplicatas
-                    imgs.append(src)
-                    print(f"✅ Imagem encontrada via padrão produto: {src}")
-                    if len(imgs) >= 5:  # Limite de 5 imagens
-                        break
+                # Verificar extensão de imagem
+                if not any(ext in src_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                    continue
+                
+                # Verificar se é uma imagem de produto (deve conter "/produtos/" e ser do domínio correto)
+                if ("/produtos/" in src_lower and 
+                    "cws.digital" in src_lower and
+                    not any(exclude in src_lower for exclude in ["/multimidia/", "/fornecedores/", "instagram", "facebook", "linkedln", "youtube", "pinterest", "tiktok"])):
+                    
+                    if src not in imgs:  # Evitar duplicatas
+                        imgs.append(src)
+                        print(f"✅ Imagem encontrada via padrão produto: {src}")
+                        if len(imgs) >= 5:  # Limite de 5 imagens
+                            break
     
     # Remover duplicatas e limitar a 5 imagens
     imgs = list(dict.fromkeys(imgs))[:5]  # dict.fromkeys preserva ordem e remove duplicatas
